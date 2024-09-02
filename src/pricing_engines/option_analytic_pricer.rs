@@ -77,11 +77,18 @@ impl PricerTrait for OptionAnalyticPricer {
         if instrument.get_currency() != instrument.get_underlying_currency()?
             && self.quanto.is_none()
         {
-            return Err(anyhow!(
-                "({}:{}) {} ({}) has different currency from underlying market_price ({}) but no quanto is provided",
-                file!(), line!(),
-                instrument.get_name(), instrument.get_code(), self.market_price.borrow().get_name(),
-            ));
+            let err = || {
+                anyhow!(
+                    "({}:{}) {} ({}) has different currency from underlying market_price ({}) but no quanto is provided",
+                    file!(),
+                    line!(),
+                    instrument.get_name(),
+                    instrument.get_code_str(),
+                    self.market_price.borrow().get_name(),
+                )
+            };
+
+            return Err(err());
         }
 
         let vol = self.volatility.borrow().get_value(t, forward_moneyness);
@@ -134,19 +141,21 @@ pub mod test {
     use ndarray::Array1;
     use std::{cell::RefCell, rc::Rc};
     use time::macros::datetime;
+    use static_id::StaticId;
 
     #[test]
     fn test_option_analytic_pricer_npv() -> Result<()> {
         let eval_date = datetime!(2024-01-02 16:30:00 +09:00);
         let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_date.clone())));
         let spot = 357.38;
+        let id = StaticId::from_str("KOSPI2", "KRX");
         let market_price = Rc::new(RefCell::new(MarketPrice::new(
             spot,
             eval_date.clone(),
             None,
             Currency::KRW,
             "KOSPI2".to_string(),
-            "KOSPI2".to_string(),
+            id,
         )));
 
         let discount_curve_data = vectordatasample!(0.03, Currency::KRW, "Option Test Curve")?;

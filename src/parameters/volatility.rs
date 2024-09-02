@@ -4,6 +4,7 @@ use crate::parameters::volatilities::{
 };
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use static_id::StaticId;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum VolatilityType {
@@ -14,7 +15,8 @@ pub enum VolatilityType {
 pub trait VolatilityTrait {
     fn get_value(&self, t: Time, forward_moneyness: Real) -> Real;
     fn get_name(&self) -> &String;
-    fn get_code(&self) -> &String;
+    fn get_code_str(&self) -> &str;
+    fn get_id(&self) -> StaticId;
     fn total_variance(&self, t: Time, forward_moneyness: Real) -> Result<Real>;
     fn total_deviation(&self, t: Time, forward_moneyness: Real) -> Result<Real>;
     fn bump_volatility(
@@ -45,10 +47,17 @@ impl Volatility {
         }
     }
 
-    pub fn get_code(&self) -> &String {
+    pub fn get_code_str(&self) -> &str {
         match self {
-            Volatility::ConstantVolatility(volatility) => volatility.get_code(),
-            Volatility::LocalVolatilitySurface(volatility) => volatility.get_code(),
+            Volatility::ConstantVolatility(volatility) => volatility.get_code_str(),
+            Volatility::LocalVolatilitySurface(volatility) => volatility.get_code_str(),
+        }
+    }
+
+    pub fn get_id(&self) -> StaticId {
+        match self {
+            Volatility::ConstantVolatility(volatility) => volatility.get_id(),
+            Volatility::LocalVolatilitySurface(volatility) => volatility.get_id(),
         }
     }
 

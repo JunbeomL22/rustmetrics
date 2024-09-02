@@ -13,37 +13,35 @@ use crate::pricing_engines::{
 use anyhow::{anyhow, Result};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    //thread,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
+use static_id::StaticId;
+use rustc_hash::FxHashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct InstrumentCategory {
     pub type_names: Option<Vec<String>>,
     pub currency: Option<Vec<Currency>>,
-    pub underlying_codes: Option<Vec<String>>,
+    pub underlying_ids: Option<Vec<StaticId>>,
 }
 
 impl InstrumentCategory {
     pub fn new(
         type_names: Option<Vec<String>>,
         currency: Option<Vec<Currency>>,
-        underlying_codes: Option<Vec<String>>,
+        underlying_ids: Option<Vec<StaticId>>,
     ) -> InstrumentCategory {
         InstrumentCategory {
             type_names,
             currency,
-            underlying_codes,
+            underlying_ids,
         }
     }
 
     pub fn contains(&self, instrument: &Instrument) -> Result<bool> {
-        let instrument_type_inp = instrument.get_type_name().to_string();
+        let instrument_type_inp = instrument.get_type_name().to_owned();
         let currency_inp = instrument.get_currency();
-        let underlying_codes_inp = instrument.get_underlying_codes();
+        let underlying_ids_inp = instrument.get_underlying_ids();
 
         let mut res: bool = true;
         // check instrument type is in type_names
@@ -54,14 +52,14 @@ impl InstrumentCategory {
         }
         // check currency is in currency
         if let Some(currency) = &self.currency {
-            if !currency.contains(currency_inp) {
+            if !currency.contains(&currency_inp) {
                 res = false;
             }
         }
         // check underlying codes are the same (not inclusion)
-        if let Some(underlying_codes) = &self.underlying_codes {
-            if !underlying_codes_inp.is_empty()
-                && underlying_codes.iter().collect::<Vec<&String>>() != underlying_codes_inp
+        if let Some(underlying_ids) = &self.underlying_ids {
+            if !underlying_ids_inp.is_empty()
+                && underlying_ids.iter().collect::<Vec<StaticId>>() != underlying_ids_inp
             {
                 res = false;
             }
@@ -79,19 +77,19 @@ pub struct EngineGenerator {
     calculation_configuration: CalculationConfiguration,
     match_parameter: MatchParameter,
     //
-    calculation_results: HashMap<String, CalculationResult>,
+    calculation_results: FxHashMap<StaticId, CalculationResult>,
     // evaluation date
     evaluation_date: EvaluationDate,
     // data
-    fx_data: Arc<HashMap<FxCode, ValueData>>,
-    stock_data: Arc<HashMap<String, ValueData>>,
-    curve_data: Arc<HashMap<String, VectorData>>,
-    dividend_data: Arc<HashMap<String, VectorData>>,
-    equity_constant_volatility_data: Arc<HashMap<String, ValueData>>,
-    equity_volatility_surface_data: Arc<HashMap<String, SurfaceData>>,
-    fx_constant_volatility_data: Arc<HashMap<FxCode, ValueData>>,
-    quanto_correlation_data: Arc<HashMap<(String, FxCode), ValueData>>,
-    past_daily_value_data: Arc<HashMap<String, DailyValueData>>,
+    fx_data: Arc<FxHashMap<FxCode, ValueData>>,
+    stock_data: Arc<FxHashMap<StaticId, ValueData>>,
+    curve_data: Arc<FxHashMap<StaticId, VectorData>>,
+    dividend_data: Arc<FxHashMap<StaticId, VectorData>>,
+    equity_constant_volatility_data: Arc<FxHashMap<StaticId, ValueData>>,
+    equity_volatility_surface_data: Arc<FxHashMap<StaticId, SurfaceData>>,
+    fx_constant_volatility_data: Arc<FxHashMap<FxCode, ValueData>>,
+    quanto_correlation_data: Arc<FxHashMap<(StaticId, FxCode), ValueData>>,
+    past_daily_value_data: Arc<FxHashMap<StaticId, DailyValueData>>,
 }
 
 impl Default for EngineGenerator {
@@ -104,19 +102,19 @@ impl Default for EngineGenerator {
             calculation_configuration: CalculationConfiguration::default(),
             match_parameter: MatchParameter::default(),
             //
-            calculation_results: HashMap::new(),
+            calculation_results: FxHashMap::new(),
             //
             evaluation_date: EvaluationDate::default(),
             //
-            fx_data: Arc::new(HashMap::new()),
-            stock_data: Arc::new(HashMap::new()),
-            curve_data: Arc::new(HashMap::new()),
-            dividend_data: Arc::new(HashMap::new()),
-            equity_constant_volatility_data: Arc::new(HashMap::new()),
-            equity_volatility_surface_data: Arc::new(HashMap::new()),
-            fx_constant_volatility_data: Arc::new(HashMap::new()),
-            quanto_correlation_data: Arc::new(HashMap::new()),
-            past_daily_value_data: Arc::new(HashMap::new()),
+            fx_data: Arc::new(FxHashMap::new()),
+            stock_data: Arc::new(FxHashMap::new()),
+            curve_data: Arc::new(FxHashMap::new()),
+            dividend_data: Arc::new(FxHashMap::new()),
+            equity_constant_volatility_data: Arc::new(FxHashMap::new()),
+            equity_volatility_surface_data: Arc::new(FxHashMap::new()),
+            fx_constant_volatility_data: Arc::new(FxHashMap::new()),
+            quanto_correlation_data: Arc::new(FxHashMap::new()),
+            past_daily_value_data: Arc::new(FxHashMap::new()),
         }
     }
 }
@@ -154,15 +152,15 @@ impl EngineGenerator {
     #[allow(clippy::too_many_arguments)]
     pub fn with_data(
         &mut self,
-        fx_data: HashMap<FxCode, ValueData>,
-        stock_data: HashMap<String, ValueData>,
-        curve_data: HashMap<String, VectorData>,
-        dividend_data: HashMap<String, VectorData>,
-        equity_constant_volatility_data: HashMap<String, ValueData>,
-        equity_volatility_surface_data: HashMap<String, SurfaceData>,
-        fx_constant_volatility_data: HashMap<FxCode, ValueData>,
-        quanto_correlation_data: HashMap<(String, FxCode), ValueData>,
-        past_daily_value_data: HashMap<String, DailyValueData>,
+        fx_data: FxHashMap<FxCode, ValueData>,
+        stock_data: FxHashMap<StaticId, ValueData>,
+        curve_data: FxHashMap<StaticId, VectorData>,
+        dividend_data: FxHashMap<StaticId, VectorData>,
+        equity_constant_volatility_data: FxHashMap<StaticId, ValueData>,
+        equity_volatility_surface_data: FxHashMap<StaticId, SurfaceData>,
+        fx_constant_volatility_data: FxHashMap<FxCode, ValueData>,
+        quanto_correlation_data: FxHashMap<(StaticId, FxCode), ValueData>,
+        past_daily_value_data: FxHashMap<StaticId, DailyValueData>,
     ) -> Result<&mut Self> {
         self.fx_data = Arc::new(fx_data);
         self.stock_data = Arc::new(stock_data);
@@ -193,19 +191,19 @@ impl EngineGenerator {
             }
         }
 
-        let mut inst_name_code: Vec<String> = vec![];
+        let mut inst_name_code: Vec<StaticId> = vec![];
         for (inst_id, is_distributed) in distribution_checker.iter().enumerate() {
             if !is_distributed {
                 let msg = format!(
                     "{} ({})\n\
                     type: {}\n\
                     currency: {}\n\
-                    underlying_codes: {:?}\n",
+                    underlying_ids: {:?}\n",
                     self.instruments[inst_id].get_name(),
                     self.instruments[inst_id].get_code(),
                     self.instruments[inst_id].get_type_name(),
                     self.instruments[inst_id].get_currency(),
-                    self.instruments[inst_id].get_underlying_codes(),
+                    self.instruments[inst_id].get_underlying_ids(),
                 );
 
                 inst_name_code.push(msg);
@@ -226,7 +224,7 @@ impl EngineGenerator {
 
     /// spawn threads to create engine and calculate
     pub fn calculate(&mut self) -> Result<()> {
-        let shared_results = Arc::new(Mutex::new(HashMap::<String, CalculationResult>::new()));
+        let shared_results = Arc::new(Mutex::new(FxHashMap::<StaticId, CalculationResult>::new()));
         let dt = self.evaluation_date.get_date_clone();
         let calc_res: Result<()> = self
             .instrument_group_vec
@@ -284,7 +282,7 @@ impl EngineGenerator {
         }
     }
 
-    pub fn get_calculation_results(&self) -> &HashMap<String, CalculationResult> {
+    pub fn get_calculation_results(&self) -> &FxHashMap<StaticId, CalculationResult> {
         &self.calculation_results
     }
 }

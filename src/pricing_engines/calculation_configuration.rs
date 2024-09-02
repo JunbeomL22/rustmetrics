@@ -233,6 +233,20 @@ impl CalculationConfiguration {
         })
     }
 
+    pub fn full_cfg() -> CalculationConfiguration {
+        CalculationConfiguration::default()
+            .with_delta_calculation(true)
+            .with_gamma_calculation(true)
+            .with_vega_calculation(true)
+            .with_rho_calculation(true)
+            .with_div_delta_calculation(true)
+            .with_theta_calculation(true)
+            .with_vega_structure_calculation(true)
+            .with_rho_structure_calculation(true)
+            .with_div_structure_calculation(true)
+            .with_vega_matrix_calculation(true)
+    }
+
     pub fn with_theta_day(mut self, theta_day: Integer) -> CalculationConfiguration {
         self.theta_day = theta_day;
         self

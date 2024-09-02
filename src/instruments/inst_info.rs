@@ -100,12 +100,29 @@ impl InstInfo {
         self.id.get_id().code.as_str()
     }
 
+    #[inline]
     pub fn get_issue_date(&self) -> Option<&OffsetDateTime> {
         self.issue_date.as_ref()
     }
 
+    #[inline]
     pub fn get_maturity(&self) -> Option<&OffsetDateTime> {
         self.maturity.as_ref()
+    }
+
+    #[inline]
+    pub fn get_currency(&self) -> Currency {
+        self.currency
+    }
+
+    #[inline]
+    pub fn get_unit_notional(&self) -> Real {
+        self.unit_notional
+    }
+
+    #[inline]
+    pub fn get_accounting_level(&self) -> AccountingLevel {
+        self.accounting_level
     }
 
 }

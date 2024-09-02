@@ -194,20 +194,21 @@ pub mod tests {
     use crate::instrument::{Instrument, InstrumentTrait};
     use crate::instruments::plain_swap::{PlainSwap, PlainSwapType};
     use crate::parameters::{rate_index::RateIndex, zero_curve::ZeroCurve};
-    use crate::pricing_engines::pricer::{Pricer, PricerTrait};
+    use crate::pricing_engines::pricer::PricerTrait;
 
     use crate::time::{
         calendar::Calendar,
-        calendar_trait::CalendarTrait,
         calendars::southkorea::{SouthKorea, SouthKoreaType},
         calendars::unitedstates::{UnitedStates, UnitedStatesType},
         conventions::{BusinessDayConvention, DayCountConvention, PaymentFrequency},
         jointcalendar::JointCalendar,
     };
+    use crate::{InstInfo, InstType};
     use anyhow::Result;
     use ndarray::array;
-    use std::{cell::RefCell, collections::HashMap, rc::Rc};
-    use time::{macros::datetime, Duration, OffsetDateTime};
+    use std::{cell::RefCell, rc::Rc};
+    use time::{macros::datetime, Duration};
+    use static_id::StaticId;
 
     #[test]
     fn test_crs_pricer() -> Result<()> {
@@ -229,11 +230,12 @@ pub mod tests {
 
         let fixed_rate = 0.04;
         let fx_rate = 1_330.0;
+        let index_id = StaticId::from_str("USD Libor 3M", "KAP");
         let rate_index = RateIndex::new(
-            String::from("3M"),
+            index_id,
+            crate::Tenor::new_from_string("3M")?,
             Currency::USD,
             String::from("USD Libor 3M"),
-            String::from("USD Libor 3M"), // this is just a mock code
         )?;
 
         let initial_fixed_side_endorsement = Some(fx_rate);
@@ -241,8 +243,21 @@ pub mod tests {
         let last_fixed_side_payment = Some(fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
+        let swap_id = StaticId::from_str("MockCRS", "OTC");
+        let swap_info = InstInfo {
+            id: swap_id,
+            name: "Mock CRS".to_string(),
+            inst_type: InstType::PlainSwap,
+            currency: Currency::KRW,
+            unit_notional: 1.0,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.clone()),
+            accounting_level: crate::AccountingLevel::L2,
+        };
+        
         let crs = PlainSwap::new_from_conventions(
-            fixed_currency,
+            swap_info,
+            
             floating_currency,
             //
             initial_fixed_side_endorsement,
@@ -250,11 +265,7 @@ pub mod tests {
             last_fixed_side_payment,
             last_floating_side_endorsement,
             //
-            unit_notional,
-            issue_date.clone(),
             effective_date.clone(),
-            maturity.clone(),
-            //
             Some(fixed_rate),
             Some(rate_index),
             None,
@@ -271,8 +282,6 @@ pub mod tests {
             payment_gap_days,
             //
             calendar,
-            "MockCRS".to_string(),
-            "MockCode".to_string(),
         )?;
 
         let inst = Instrument::PlainSwap(crs);
@@ -325,7 +334,7 @@ pub mod tests {
             None,
             fx_code.get_currency2().clone(),
             fx_code.to_string(),
-            fx_code.to_string(),
+            fx_code.to_static_id(),
         )));
 
         let pricer = PlainSwapPricer::new(
@@ -405,11 +414,12 @@ pub mod tests {
         let payment_gap_days = 0;
 
         let fixed_rate = 0.04;
+        let index_id = StaticId::from_str("CD 91D", "KAP");
         let rate_index = RateIndex::new(
-            String::from("91D"),
+            index_id,
+            crate::Tenor::new_from_string("3M")?,
             Currency::KRW,
-            String::from("CD 91D"),
-            String::from("CD 91D"), // this is just a mock code
+            String::from("CD 91D")
         )?;
 
         let initial_fixed_side_endorsement = None;
@@ -417,8 +427,20 @@ pub mod tests {
         let last_fixed_side_payment = None;
         let last_floating_side_endorsement = None;
 
+        let inst_id = StaticId::from_str("MockIRS", "OTC");
+        let inst_info = InstInfo {
+            id: inst_id,
+            name: "Mock IRS".to_string(),
+            inst_type: InstType::PlainSwap,
+            currency: Currency::KRW,
+            unit_notional,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.clone()),
+            accounting_level: crate::AccountingLevel::L2,
+        };
+
         let irs = PlainSwap::new_from_conventions(
-            fixed_currency,
+            inst_info,            
             floating_currency,
             //
             initial_fixed_side_endorsement,
@@ -426,10 +448,7 @@ pub mod tests {
             last_fixed_side_payment,
             last_floating_side_endorsement,
             //
-            unit_notional,
-            issue_date.clone(),
             effective_date.clone(),
-            maturity.clone(),
             //
             Some(fixed_rate),
             Some(rate_index),
@@ -447,8 +466,6 @@ pub mod tests {
             payment_gap_days,
             //
             calendar,
-            "MockIRS".to_string(),
-            "MockCode".to_string(),
         )?;
 
         let curve_data = VectorData::new(

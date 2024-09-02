@@ -6,7 +6,7 @@ use crate::utils::number_format::{formatted_number, write_number_with_commas};
 use anyhow::{anyhow, Result};
 use ndarray::Array2;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use time::OffsetDateTime;
 use static_id::StaticId;
 
@@ -28,20 +28,20 @@ pub struct CalculationResult {
     evaluation_date: Option<OffsetDateTime>,
     npv_result: Option<NpvResult>,
     value: Option<Real>,
-    fx_exposure: Option<HashMap<Currency, Real>>,
-    delta: Option<HashMap<StaticId, Real>>,
-    gamma: Option<HashMap<StaticId, Real>>,
-    vega: Option<HashMap<StaticId, Real>>,
-    vega_strucure: Option<HashMap<StaticId, Vec<Real>>>, // underlying code -> Vec::<Real> on vega_tenor in CalculationConfiguration
-    vega_matrix: Option<HashMap<StaticId, Array2<Real>>>, // underlying code -> Vec<Vec<Real>> vega_matrix
+    fx_exposure: Option<FxHashMap<Currency, Real>>,
+    delta: Option<FxHashMap<StaticId, Real>>,
+    gamma: Option<FxHashMap<StaticId, Real>>,
+    vega: Option<FxHashMap<StaticId, Real>>,
+    vega_strucure: Option<FxHashMap<StaticId, Vec<Real>>>, // underlying code -> Vec::<Real> on vega_tenor in CalculationConfiguration
+    vega_matrix: Option<FxHashMap<StaticId, Array2<Real>>>, // underlying code -> Vec<Vec<Real>> vega_matrix
     theta: Option<Real>,
-    div_delta: Option<HashMap<StaticId, Real>>,
-    div_structure: Option<HashMap<StaticId, Vec<Real>>>, // underlying code -> Vec::<Real> on div_tenor in CalculationConfiguration
-    rho: Option<HashMap<StaticId, Real>>,                // Curve Code -> rho
-    rho_structure: Option<HashMap<StaticId, Vec<Real>>>, // curve code -> Vec::<Real> on rho_tenor in CalculationConfig
+    div_delta: Option<FxHashMap<StaticId, Real>>,
+    div_structure: Option<FxHashMap<StaticId, Vec<Real>>>, // underlying code -> Vec::<Real> on div_tenor in CalculationConfiguration
+    rho: Option<FxHashMap<StaticId, Real>>,                // Curve Code -> rho
+    rho_structure: Option<FxHashMap<StaticId, Vec<Real>>>, // curve code -> Vec::<Real> on rho_tenor in CalculationConfig
     theta_day: Option<Integer>,
     #[serde(skip)]
-    cashflows: Option<HashMap<OffsetDateTime, Real>>, //expected cashflow inbetween
+    cashflows: Option<FxHashMap<OffsetDateTime, Real>>, //expected cashflow inbetween
     representation_currency: Option<Currency>,
 }
 
@@ -265,112 +265,112 @@ impl CalculationResult {
         self.value
     }
 
-    pub fn set_fx_exposure(&mut self, fx_exposure: HashMap<Currency, Real>) {
+    pub fn set_fx_exposure(&mut self, fx_exposure: FxHashMap<Currency, Real>) {
         self.fx_exposure = Some(fx_exposure);
     }
 
     /// insert delta to self.delta as und_code as its key
     /// if the key is already in the map, it will be updated
-    pub fn set_single_delta(&mut self, und_code: &str, v: Real) {
+    pub fn set_single_delta(&mut self, und_id: StaticId, v: Real) {
         match &mut self.delta {
             None => {
-                let mut delta = HashMap::new();
-                delta.insert(und_code.to_owned(), v);
+                let mut delta = FxHashMap::default();
+                delta.insert(und_id, v);
                 self.delta = Some(delta);
             }
             Some(delta) => {
-                delta.insert(und_code.to_owned(), v);
+                delta.insert(und_id, v);
             }
         }
     }
 
-    pub fn set_single_gamma(&mut self, und_code: &str, v: Real) {
+    pub fn set_single_gamma(&mut self, und_id: StaticId, v: Real) {
         match &mut self.gamma {
             None => {
-                let mut gamma = HashMap::new();
-                gamma.insert(und_code.to_owned(), v);
+                let mut gamma = FxHashMap::default();
+                gamma.insert(und_id, v);
                 self.gamma = Some(gamma);
             }
             Some(gamma) => {
-                gamma.insert(und_code.to_owned(), v);
+                gamma.insert(und_id, v);
             }
         }
     }
 
-    pub fn set_single_vega_structure(&mut self, und_code: &str, vega_structure: Vec<Real>) {
+    pub fn set_single_vega_structure(&mut self, und_id: StaticId, vega_structure: Vec<Real>) {
         match &mut self.vega_strucure {
             None => {
-                let mut vega_structure_map = HashMap::new();
-                vega_structure_map.insert(und_code.to_owned(), vega_structure);
+                let mut vega_structure_map = FxHashMap::default();
+                vega_structure_map.insert(und_id, vega_structure);
                 self.vega_strucure = Some(vega_structure_map);
             }
             Some(vega_structure_map) => {
-                vega_structure_map.insert(und_code.to_owned(), vega_structure);
+                vega_structure_map.insert(und_id, vega_structure);
             }
         }
     }
 
-    pub fn set_single_vega(&mut self, und_code: &str, v: Real) {
+    pub fn set_single_vega(&mut self, und_id: StaticId, v: Real) {
         match &mut self.vega {
             None => {
-                let mut vega = HashMap::new();
-                vega.insert(und_code.to_owned(), v);
+                let mut vega = FxHashMap::default();
+                vega.insert(und_id, v);
                 self.vega = Some(vega);
             }
             Some(vega) => {
-                vega.insert(und_code.to_owned(), v);
+                vega.insert(und_id, v);
             }
         }
     }
 
-    pub fn set_single_rho(&mut self, curve_code: &str, v: Real) {
+    pub fn set_single_rho(&mut self, curve_id: StaticId, v: Real) {
         match &mut self.rho {
             None => {
-                let mut rho = HashMap::new();
-                rho.insert(curve_code.to_owned(), v);
+                let mut rho = FxHashMap::default();
+                rho.insert(curve_id, v);
                 self.rho = Some(rho);
             }
             Some(rho) => {
-                rho.insert(curve_code.to_owned(), v);
+                rho.insert(curve_id, v);
             }
         }
     }
 
-    pub fn set_single_rho_structure(&mut self, curve_code: &str, rho_structure: Vec<Real>) {
+    pub fn set_single_rho_structure(&mut self, curve_id: StaticId, rho_structure: Vec<Real>) {
         match &mut self.rho_structure {
             None => {
-                let mut rho_structure_map = HashMap::new();
-                rho_structure_map.insert(curve_code.to_owned(), rho_structure);
+                let mut rho_structure_map = FxHashMap::default();
+                rho_structure_map.insert(curve_id, rho_structure);
                 self.rho_structure = Some(rho_structure_map);
             }
             Some(rho_structure_map) => {
-                rho_structure_map.insert(curve_code.to_owned(), rho_structure);
+                rho_structure_map.insert(curve_id, rho_structure);
             }
         }
     }
 
-    pub fn set_single_div_delta(&mut self, und_code: &str, v: Real) {
+    pub fn set_single_div_delta(&mut self, und_id: StaticId, v: Real) {
         match &mut self.div_delta {
             None => {
-                let mut div_delta = HashMap::new();
-                div_delta.insert(und_code.to_owned(), v);
+                let mut div_delta = FxHashMap::default();
+                div_delta.insert(und_id, v);
                 self.div_delta = Some(div_delta);
             }
             Some(div_delta) => {
-                div_delta.insert(und_code.to_owned(), v);
+                div_delta.insert(und_id, v);
             }
         }
     }
 
-    pub fn set_single_div_structure(&mut self, und_code: &str, div_structure: Vec<Real>) {
+    pub fn set_single_div_structure(&mut self, und_id: StaticId, div_structure: Vec<Real>) {
         match &mut self.div_structure {
             None => {
-                let mut div_structure_map = HashMap::new();
-                div_structure_map.insert(und_code.to_owned(), div_structure);
+                let mut div_structure_map = FxHashMap::default();
+                div_structure_map.insert(und_id, div_structure);
                 self.div_structure = Some(div_structure_map);
             }
             Some(div_structure_map) => {
-                div_structure_map.insert(und_code.to_owned(), div_structure);
+                div_structure_map.insert(und_id, div_structure);
             }
         }
     }
@@ -383,7 +383,7 @@ impl CalculationResult {
         self.theta = Some(theta);
     }
 
-    pub fn set_cashflows(&mut self, cashflows: HashMap<OffsetDateTime, Real>) {
+    pub fn set_cashflows(&mut self, cashflows: FxHashMap<OffsetDateTime, Real>) {
         self.cashflows = Some(cashflows);
     }
 
@@ -395,27 +395,27 @@ impl CalculationResult {
         self.evaluation_date.as_ref()
     }
 
-    pub fn get_fx_exposure(&self) -> Option<&HashMap<Currency, Real>> {
+    pub fn get_fx_exposure(&self) -> Option<&FxHashMap<Currency, Real>> {
         self.fx_exposure.as_ref()
     }
 
-    pub fn get_delta(&self) -> Option<&HashMap<StaticId, Real>> {
+    pub fn get_delta(&self) -> Option<&FxHashMap<StaticId, Real>> {
         self.delta.as_ref()
     }
 
-    pub fn get_gamma(&self) -> Option<&HashMap<StaticId, Real>> {
+    pub fn get_gamma(&self) -> Option<&FxHashMap<StaticId, Real>> {
         self.gamma.as_ref()
     }
 
-    pub fn get_vega(&self) -> Option<&HashMap<StaticId, Real>> {
+    pub fn get_vega(&self) -> Option<&FxHashMap<StaticId, Real>> {
         self.vega.as_ref()
     }
 
-    pub fn get_vega_structure(&self) -> Option<&HashMap<StaticId, Vec<Real>>> {
+    pub fn get_vega_structure(&self) -> Option<&FxHashMap<StaticId, Vec<Real>>> {
         self.vega_strucure.as_ref()
     }
 
-    pub fn get_vega_matrix(&self) -> Option<&HashMap<StaticId, Array2<Real>>> {
+    pub fn get_vega_matrix(&self) -> Option<&FxHashMap<StaticId, Array2<Real>>> {
         self.vega_matrix.as_ref()
     }
 
@@ -423,23 +423,23 @@ impl CalculationResult {
         self.theta
     }
 
-    pub fn get_rho(&self) -> Option<&HashMap<StaticId, Real>> {
+    pub fn get_rho(&self) -> Option<&FxHashMap<StaticId, Real>> {
         self.rho.as_ref()
     }
 
-    pub fn get_rho_structure(&self) -> Option<&HashMap<StaticId, Vec<Real>>> {
+    pub fn get_rho_structure(&self) -> Option<&FxHashMap<StaticId, Vec<Real>>> {
         self.rho_structure.as_ref()
     }
 
-    pub fn get_cashflows(&self) -> Option<&HashMap<OffsetDateTime, Real>> {
+    pub fn get_cashflows(&self) -> Option<&FxHashMap<OffsetDateTime, Real>> {
         self.cashflows.as_ref()
     }
 
-    pub fn get_div_delta(&self) -> Option<&HashMap<StaticId, Real>> {
+    pub fn get_div_delta(&self) -> Option<&FxHashMap<StaticId, Real>> {
         self.div_delta.as_ref()
     }
 
-    pub fn get_div_structure(&self) -> Option<&HashMap<StaticId, Vec<Real>>> {
+    pub fn get_div_structure(&self) -> Option<&FxHashMap<StaticId, Vec<Real>>> {
         self.div_structure.as_ref()
     }
 
@@ -447,15 +447,15 @@ impl CalculationResult {
         self.representation_currency = Some(currency);
     }
 
-    pub fn set_single_vega_matrix(&mut self, und_code: &str, vega_matrix: Array2<Real>) {
+    pub fn set_single_vega_matrix(&mut self, und_id: StaticId, vega_matrix: Array2<Real>) {
         match &mut self.vega_matrix {
             None => {
-                let mut vega_matrix_map = HashMap::new();
-                vega_matrix_map.insert(und_code.to_owned(), vega_matrix);
+                let mut vega_matrix_map = FxHashMap::default();
+                vega_matrix_map.insert(und_id, vega_matrix);
                 self.vega_matrix = Some(vega_matrix_map);
             }
             Some(vega_matrix_map) => {
-                vega_matrix_map.insert(und_code.to_owned(), vega_matrix);
+                vega_matrix_map.insert(und_id, vega_matrix);
             }
         }
     }
@@ -473,9 +473,9 @@ impl CalculationResult {
         let evaluation_date = self.evaluation_date;
         let npv_result = self.npv_result.clone();
         let value = self.value.map(|x| x * fx_rate);
-        let fx_exposure: Option<HashMap<Currency, Real>> = match &self.fx_exposure {
+        let fx_exposure: Option<FxHashMap<Currency, Real>> = match &self.fx_exposure {
             Some(exposure) => {
-                let mut new_exposure = HashMap::new();
+                let mut new_exposure = FxHashMap::default();
                 for (c, v) in exposure {
                     new_exposure.insert(*c, v * fx_rate);
                 }
@@ -484,9 +484,9 @@ impl CalculationResult {
             None => None,
         };
 
-        let delta: Option<HashMap<StaticId, f32>> = match &self.delta {
+        let delta: Option<FxHashMap<StaticId, f32>> = match &self.delta {
             Some(delta) => {
-                let mut new_delta = HashMap::new();
+                let mut new_delta = FxHashMap::default();
                 for (und_code, v) in delta {
                     new_delta.insert(und_code.clone(), v * fx_rate);
                 }
@@ -495,9 +495,9 @@ impl CalculationResult {
             None => None,
         };
 
-        let gamma: Option<HashMap<StaticId, f32>> = match &self.gamma {
+        let gamma: Option<FxHashMap<StaticId, f32>> = match &self.gamma {
             Some(gamma) => {
-                let mut new_gamma = HashMap::new();
+                let mut new_gamma = FxHashMap::default();
                 for (und_code, v) in gamma {
                     new_gamma.insert(und_code.clone(), v * fx_rate);
                 }
@@ -506,9 +506,9 @@ impl CalculationResult {
             None => None,
         };
 
-        let vega: Option<HashMap<StaticId, Real>> = match &self.vega {
+        let vega: Option<FxHashMap<StaticId, Real>> = match &self.vega {
             Some(vega) => {
-                let mut new_vega = HashMap::new();
+                let mut new_vega = FxHashMap::default();
                 for (und_code, v) in vega {
                     new_vega.insert(und_code.clone(), v * fx_rate);
                 }
@@ -516,9 +516,9 @@ impl CalculationResult {
             }
             None => None,
         };
-        let vega_strucure: Option<HashMap<StaticId, Vec<Real>>> = match &self.vega_strucure {
+        let vega_strucure: Option<FxHashMap<StaticId, Vec<Real>>> = match &self.vega_strucure {
             Some(vega_structure) => {
-                let mut new_vega_structure = HashMap::new();
+                let mut new_vega_structure = FxHashMap::default();
                 for (und_code, v) in vega_structure {
                     let new_v = v.iter().map(|x| x * fx_rate).collect();
                     new_vega_structure.insert(und_code.clone(), new_v);
@@ -527,9 +527,9 @@ impl CalculationResult {
             }
             None => None,
         };
-        let vega_matrix: Option<HashMap<StaticId, Array2<Real>>> = match &self.vega_matrix {
+        let vega_matrix: Option<FxHashMap<StaticId, Array2<Real>>> = match &self.vega_matrix {
             Some(vega_matrix) => {
-                let mut new_vega_matrix = HashMap::new();
+                let mut new_vega_matrix = FxHashMap::default();
                 for (und_code, v) in vega_matrix {
                     let new_v = v.mapv(|x| x * fx_rate);
                     new_vega_matrix.insert(und_code.clone(), new_v);
@@ -540,9 +540,9 @@ impl CalculationResult {
         };
 
         let theta: Option<Real> = self.theta.map(|x| x * fx_rate);
-        let div_delta: Option<HashMap<StaticId, Real>> = match &self.div_delta {
+        let div_delta: Option<FxHashMap<StaticId, Real>> = match &self.div_delta {
             Some(div_delta) => {
-                let mut new_div_delta = HashMap::new();
+                let mut new_div_delta = FxHashMap::default();
                 for (und_code, v) in div_delta {
                     new_div_delta.insert(und_code.clone(), v * fx_rate);
                 }
@@ -550,9 +550,9 @@ impl CalculationResult {
             }
             None => None,
         };
-        let div_structure: Option<HashMap<StaticId, Vec<Real>>> = match &self.div_structure {
+        let div_structure: Option<FxHashMap<StaticId, Vec<Real>>> = match &self.div_structure {
             Some(div_structure) => {
-                let mut new_div_structure: HashMap<StaticId, Vec<f32>> = HashMap::new();
+                let mut new_div_structure: FxHashMap<StaticId, Vec<f32>> = FxHashMap::default();
                 for (und_code, v) in div_structure {
                     let new_v = v.iter().map(|x| x * fx_rate).collect();
                     new_div_structure.insert(und_code.clone(), new_v);
@@ -561,9 +561,9 @@ impl CalculationResult {
             }
             None => None,
         };
-        let rho: Option<HashMap<StaticId, Real>> = match &self.rho {
+        let rho: Option<FxHashMap<StaticId, Real>> = match &self.rho {
             Some(rho) => {
-                let mut new_rho = HashMap::new();
+                let mut new_rho = FxHashMap::default();
                 for (curve_code, v) in rho {
                     new_rho.insert(curve_code.clone(), v * fx_rate);
                 }
@@ -571,9 +571,9 @@ impl CalculationResult {
             }
             None => None,
         };
-        let rho_structure: Option<HashMap<StaticId, Vec<Real>>> = match &self.rho_structure {
+        let rho_structure: Option<FxHashMap<StaticId, Vec<Real>>> = match &self.rho_structure {
             Some(rho_structure) => {
-                let mut new_rho_structure = HashMap::new();
+                let mut new_rho_structure = FxHashMap::default();
                 for (curve_code, v) in rho_structure {
                     let new_v = v.iter().map(|x| x * fx_rate).collect();
                     new_rho_structure.insert(curve_code.clone(), new_v);
@@ -583,7 +583,7 @@ impl CalculationResult {
             None => None,
         };
         let theta_day: Option<Integer> = self.theta_day;
-        let cashflows: Option<HashMap<OffsetDateTime, Real>> = self.cashflows.clone();
+        let cashflows: Option<FxHashMap<OffsetDateTime, Real>> = self.cashflows.clone();
         let representation_currency: Option<Currency> = Some(currency);
 
         let result = CalculationResult {
@@ -664,26 +664,29 @@ mod tests {
 
         let fut_trait = inst;
         let name = fut_trait.get_name();
-        let code = fut_trait.get_code();
-        let type_name = fut_trait.get_type_name();
+        let code = fut_trait.get_code_str();
+
         let maturity = fut_trait.get_maturity();
 
-        
+        let inst_id = StaticId::from_str(code, "KRX");
 
         let instrument = InstInfo {
-            name.clone(),
-            code.clone(),
-            type_name,
-            fut_trait.get_currency(),
-            fut_trait.get_unit_notional(),
-            maturity,
+            id: inst_id,
+            name: name.clone(),
+            inst_type: InstType::Futures,
+            currency: fut_trait.get_currency(),
+            unit_notional: fut_trait.get_unit_notional(),
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.unwrap().clone()),
+            accounting_level: AccountingLevel::L1,
         };
 
         let evaluation_date = datetime!(2021-01-01 00:00:00 +00:00);
         let mut result = CalculationResult::new(instrument, evaluation_date);
         result.set_npv(NpvResult::new_from_npv(100.0));
 
-        result.set_single_delta(&"KOSPI200".to_string(), 0.1);
+        let und_id = StaticId::from_str("KOSPI200", "KRX");
+        result.set_single_delta(und_id, 0.1);
 
         let serialized = serde_json::to_string_pretty(&result).unwrap();
         println!("serialized = {}", serialized);

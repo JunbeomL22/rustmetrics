@@ -832,7 +832,7 @@ mod tests {
         };
 
         let irs = PlainSwap::new_from_conventions(
-            inst_info,
+            swap_info,
             Currency::KRW,
             //
             None,

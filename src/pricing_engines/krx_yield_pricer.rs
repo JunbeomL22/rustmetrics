@@ -131,7 +131,7 @@ impl PricerTrait for KrxYieldPricer {
                     file!(),
                     line!(),
                     bond.get_name(),
-                    bond.get_code()
+                    bond.get_code_str()
                 )
             })?;
 
@@ -165,7 +165,7 @@ impl PricerTrait for KrxYieldPricer {
             .filter(|&base_schedule| base_schedule.get_payment_date().date() <= pricing_date.date())
             .map(|base_schedule| base_schedule.get_payment_date())
             .max()
-            .unwrap_or(bond.get_issue_date()?);
+            .unwrap_or(bond.get_issue_date().unwrap());
         let b = (min_cashflow_date.date() - previous_date.date()).whole_days();
         let frac = d as Real / b as Real;
 
@@ -190,8 +190,11 @@ mod tests {
     use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
     use crate::time::conventions::{BusinessDayConvention, DayCountConvention, PaymentFrequency};
     use crate::time::{calendar::Calendar, jointcalendar::JointCalendar};
+    use crate::InstInfo;
+    use crate::instruments::bond::BondInfo;
     use time::macros::datetime;
     use time::Duration;
+    use static_id::StaticId;
 
     #[test]
     fn test_krx_yield_pricer() -> Result<()> {
@@ -200,7 +203,6 @@ mod tests {
         let eval_date_rc = Rc::new(RefCell::new(eval_date));
         let pricing_date = dt + Duration::days(1);
         //
-
         let issuedate2 = datetime!(2022-12-10 16:30:00 +09:00);
         let maturity2 = datetime!(2025-12-10 16:30:00 +09:00);
         let issuer_name2 = "Korea Gov";
@@ -213,20 +215,33 @@ mod tests {
         let issuer_type2 = IssuerType::Government;
         let credit_rating2 = CreditRating::None;
 
+        let inst_id = StaticId::from_str(bond_code2, "KRX");
+        let inst_info = InstInfo {
+            id: inst_id,
+            name: bond_name2.to_string(),
+            inst_type: crate::InstType::Bond,
+            currency: bond_currency2,
+            unit_notional: 10_000.0,
+            accounting_level: crate::AccountingLevel::L1,
+            issue_date: Some(issuedate2.clone()),
+            maturity: Some(maturity2.clone()),
+        };
+
+        let bond_info = BondInfo {
+            issuer_type: issuer_type2,
+            credit_rating: credit_rating2,
+            issuer_id: StaticId::from_str(issuer_name2, "KRX"),
+            rank: RankType::Senior,
+        };
+
         let bond = Bond::new_from_conventions(
-            issuer_type2,
-            credit_rating2,
-            issuer_name2.to_string(),
-            RankType::Senior,
-            bond_currency2,
-            //
-            1_000_0.0,
+            inst_info,
+            bond_info,
             false,
             //
-            issuedate2.clone(),
-            issuedate2.clone(),
+            None,
             Some(pricing_date.clone()),
-            maturity2,
+            None,
             //
             Some(0.0425),
             None,
@@ -242,8 +257,6 @@ mod tests {
             //
             0,
             0,
-            bond_name2.to_string(),
-            bond_code2.to_string(),
         )?;
 
         let cashflows = bond.get_cashflows(&pricing_date, None, None)?;

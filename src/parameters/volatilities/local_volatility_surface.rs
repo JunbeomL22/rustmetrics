@@ -18,6 +18,8 @@ use std::{cell::RefCell, rc::Rc};
 //
 use ndarray::{Array1, Array2};
 use time::OffsetDateTime;
+use static_id::StaticId;
+
 #[derive(Clone, Debug)]
 pub struct LocalVolatilitySurface {
     interpolated_imvol: Array2<Real>,
@@ -40,7 +42,7 @@ pub struct LocalVolatilitySurface {
     local_volatility: BilinearInterpolator,
     //
     name: String,
-    code: String,
+    id: StaticId,
 }
 
 impl LocalVolatilitySurface {
@@ -53,7 +55,7 @@ impl LocalVolatilitySurface {
         stickyness_type: StickynessType,
         lv_interpolator: VolatilityInterplator,
         name: String,
-        code: String,
+        id: StaticId,
     ) -> LocalVolatilitySurface {
         LocalVolatilitySurface {
             interpolated_imvol: Array2::default((0, 0)),
@@ -74,7 +76,7 @@ impl LocalVolatilitySurface {
             local_volatility: BilinearInterpolator::default(),
             //
             name,
-            code,
+            id,
         }
     }
 
@@ -88,26 +90,32 @@ impl LocalVolatilitySurface {
         let eval_date = self.evaluation_date.borrow().get_date_clone();
 
         if given_dates.windows(2).any(|w| w[0] > w[1]) {
-            return Err(anyhow!(
-                "({}:{}) Maturity dates of {} ({}) are not sorted: {:?}",
-                file!(),
-                line!(),
-                self.name,
-                self.code,
-                given_dates
-            ));
+            let err = || {
+                anyhow!(
+                    "({}:{}) Maturity dates of {} ({}) are not sorted: {:?}",
+                    file!(),
+                    line!(),
+                    self.name,
+                    self.id,
+                    given_dates
+                )
+            };
+            return Err(err());
         }
 
         for date in given_dates.iter() {
             if date < &eval_date {
-                return Err(anyhow!(
-                    "({}:{}) Maturity date of {} ({}) is before evaluation date: {}",
-                    file!(),
-                    line!(),
-                    self.name,
-                    self.code,
-                    date
-                ));
+                let err = || {
+                    anyhow!(
+                        "({}:{}) Maturity date of {} ({}) is before evaluation date: {}",
+                        file!(),
+                        line!(),
+                        self.name,
+                        self.id,
+                        date
+                    )
+                };
+                return Err(err());
             }
         }
 
@@ -154,15 +162,18 @@ impl LocalVolatilitySurface {
             .collect::<Vec<OffsetDateTime>>();
 
         if !self.imvol_maturity_dates.windows(2).all(|w| w[0] <= w[1]) {
-            return Err(anyhow!(
-                "({}:{}) Maturity dates of {} ({}) are not sorted: {:?}",
-                file!(),
-                line!(),
-                self.name,
-                self.code,
-                self.imvol_maturity_dates
-            ));
+            let err = || {
+                anyhow!(
+                    "({}:{}) Maturity dates of {} ({}) are not sorted: {:?}",
+                    file!(),
+                    line!(),
+                    self.name,
+                    self.id,
+                    self.imvol_maturity_dates
+                )};
+            return Err(err());
         }
+        
         let mut tv = Vec::new();
         for tenor in vega_structure_tenors.iter() {
             tv.push(
@@ -171,15 +182,19 @@ impl LocalVolatilitySurface {
         }
         // sanity check if the time vector is sorted
         if !tv.windows(2).all(|w| w[0] <= w[1]) {
-            return Err(anyhow!(
-                "({}:{}) Time vector of {} ({}) are not sorted: {:?}",
-                file!(),
-                line!(),
-                self.name,
-                self.code,
-                tv
-            ));
+            let err = || {
+                anyhow!(
+                    "({}:{}) Time vector of {} ({}) are not sorted: {:?}",
+                    file!(),
+                    line!(),
+                    self.name,
+                    self.id,
+                    tv
+                )};
+
+            return Err(err());
         }
+
         self.imvol_maturity_times = Array1::from_vec(tv);
         self.imvol_spot_moneyness = vega_matrix_spot_moneyness;
 
@@ -310,12 +325,12 @@ impl LocalVolatilitySurface {
             .with_context(|| {
                 anyhow!(
                     "({}:{}) failed to get collateral discount factor\n\
-                maturity: {}, name: {}, code: {}",
+                    maturity: {}, name: {}, code: {}",
                     file!(),
                     line!(),
                     maturity,
                     self.name,
-                    self.code
+                    self.id,
                 )
             })?;
 
@@ -326,12 +341,12 @@ impl LocalVolatilitySurface {
             .with_context(|| {
                 anyhow!(
                     "({}:{}) failed to get borrowing discount factor\n\
-                maturity: {}, name: {}, code: {}",
+                    maturity: {}, name: {}, code: {}",
                     file!(),
                     line!(),
                     maturity,
                     self.name,
-                    self.code
+                    self.id,
                 )
             })?;
 
@@ -347,7 +362,7 @@ impl LocalVolatilitySurface {
                     line!(),
                     maturity,
                     self.name,
-                    self.code
+                    self.id
                 )
             })?;
 
@@ -384,8 +399,12 @@ impl VolatilityTrait for LocalVolatilitySurface {
         &self.name
     }
 
-    fn get_code(&self) -> &String {
-        &self.code
+    fn get_code_str(&self) -> &str {
+        self.id.code_str()
+    }
+
+    fn get_id(&self) -> StaticId {
+        self.id
     }
 
     fn total_variance(&self, t: Time, forward_moneyness: Real) -> Result<Real> {
@@ -401,7 +420,7 @@ impl VolatilityTrait for LocalVolatilitySurface {
                     t,
                     forward_moneyness,
                     self.name,
-                    self.code
+                    self.id
                 )
             })?;
 
@@ -421,7 +440,7 @@ impl VolatilityTrait for LocalVolatilitySurface {
                     t,
                     forward_moneyness,
                     self.name,
-                    self.code
+                    self.id
                 )
             })?;
 
@@ -514,7 +533,7 @@ mod tests {
 
         //println!("vector_data: {:?}", dummy_data);
         //println!("surface_data: {:?}", surface_data);
-
+        let vol_id = static_id::StaticId::from_str("local vol", "KRX");
         let mut local_volatility_surface = LocalVolatilitySurface::initialize(
             evaluation_date.clone(),
             equity.clone(),
@@ -523,7 +542,7 @@ mod tests {
             StickynessType::default(),
             VolatilityInterplator::AndreasenHuge(AndreasenHuge::default()),
             "local vol".to_string(),
-            "local vol".to_string(),
+            vol_id,
         );
 
         let vega_structure_tenors = vec!["1M", "2M", "3M", "6M", "9M", "1Y", "1Y6M", "2Y", "3Y"]

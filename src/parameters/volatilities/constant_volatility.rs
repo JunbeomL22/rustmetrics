@@ -2,17 +2,18 @@ use crate::definitions::{Real, Time};
 use crate::parameters::volatility::VolatilityTrait;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use static_id::StaticId;
 //
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstantVolatility {
     value: Real,
     name: String,
-    code: String,
+    id: StaticId,
 }
 
 impl ConstantVolatility {
-    pub fn new(value: Real, name: String, code: String) -> ConstantVolatility {
-        ConstantVolatility { value, name, code }
+    pub fn new(value: Real, name: String, id: StaticId) -> ConstantVolatility {
+        ConstantVolatility { value, name, id }
     }
 }
 
@@ -21,7 +22,7 @@ impl Default for ConstantVolatility {
         ConstantVolatility {
             value: 0.0,
             name: "".to_string(),
-            code: "".to_string(),
+            id: StaticId::default(),
         }
     }
 }
@@ -35,8 +36,12 @@ impl VolatilityTrait for ConstantVolatility {
         &self.name
     }
 
-    fn get_code(&self) -> &String {
-        &self.code
+    fn get_code_str(&self) -> &str {
+        self.id.code_str()
+    }
+
+    fn get_id(&self) -> StaticId {
+        self.id
     }
 
     fn total_variance(&self, t: Time, _x: Real) -> Result<Real> {

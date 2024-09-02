@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt::Display;
 use std::hash::Hash;
+use static_id::StaticId;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum Currency {
@@ -103,6 +104,12 @@ impl FxCode {
             currency2: self.currency1,
         }
     }
+
+    pub fn to_static_id(&self) -> StaticId {
+        let s = format!("{:?}{:?}", self.currency1, self.currency2);
+        StaticId::from_str(s.as_str(), "")
+    }
+
 }
 impl Display for FxCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
