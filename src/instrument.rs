@@ -29,9 +29,12 @@ use anyhow::{anyhow, Context, Result};
 use enum_dispatch::enum_dispatch;
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet},
     ops::Index,
     rc::Rc,
+};
+use rustc_hash::{
+    FxHashMap,
+    FxHashSet,
 };
 use crate::InstInfo;
 use time::OffsetDateTime;
@@ -42,13 +45,12 @@ pub trait InstrumentTrait {
     fn get_inst_info(&self) -> &InstInfo;
     fn get_id(&self) -> StaticId { self.get_inst_info().id }
     fn get_name(&self) -> &String { self.get_inst_info().get_name() }
-    fn get_symbol_str(&self) -> &str { self.get_inst_info().symbol_str() }
+    fn get_code_str(&self) -> &str { self.get_inst_info().code_str() }
     fn get_currency(&self) -> Currency { self.get_inst_info().currency }
     fn get_unit_notional(&self) -> Real { self.get_inst_info().unit_notional }
     fn get_type_name(&self) -> &'static str { self.get_inst_info().type_name() }
     fn get_average_trade_price(&self) -> Real { 0.0 }
     fn get_accountring_level(&self) -> AccountingLevel { self.get_inst_info().accounting_level }
-    fn get_code(&self) -> String { self.get_symbol_str().to_string() }
     //
     // There is an instrument that does not have maturity date, so it is optional
     fn get_maturity(&self) -> Option<&OffsetDateTime> { self.get_inst_info().get_maturity() }
@@ -118,7 +120,7 @@ pub trait InstrumentTrait {
         _pricing_date: &OffsetDateTime,
         _forward_curve: Option<Rc<RefCell<ZeroCurve>>>,
         _past_data: Option<Rc<DailyClosePrice>>,
-    ) -> Result<HashMap<OffsetDateTime, Real>> {
+    ) -> Result<FxHashMap<OffsetDateTime, Real>> {
         Err(anyhow!(
             "not supported instrument type on get_coupon_cashflow"
         ))
@@ -129,7 +131,7 @@ pub trait InstrumentTrait {
         _pricing_date: &OffsetDateTime,
         _forward_curve: Option<Rc<RefCell<ZeroCurve>>>,
         _past_data: Option<Rc<DailyClosePrice>>,
-    ) -> Result<HashMap<OffsetDateTime, Real>> {
+    ) -> Result<FxHashMap<OffsetDateTime, Real>> {
         Err(anyhow!(
             "not supported instrument type on get_floating_cashflows"
         ))
@@ -138,7 +140,7 @@ pub trait InstrumentTrait {
     fn get_fixed_cashflows(
         &self,
         _pricing_date: &OffsetDateTime,
-    ) -> Result<HashMap<OffsetDateTime, Real>> {
+    ) -> Result<FxHashMap<OffsetDateTime, Real>> {
         Err(anyhow!(
             "not supported instrument type on get_fixed_cashflows"
         ))
@@ -309,8 +311,8 @@ impl Instruments {
         fxcodes
     }
 
-    pub fn get_all_quanto_fxcode_und_pairs(&self) -> HashSet<(StaticId, &FxCode)> {
-        let mut fxcodes = HashSet::new();
+    pub fn get_all_quanto_fxcode_und_pairs(&self) -> FxHashSet<(StaticId, &FxCode)> {
+        let mut fxcodes = FxHashSet::default();
         for instrument in self.instruments.iter() {
             let codes = instrument.get_quanto_fxcode_und_pair();
             for code in codes.iter() {
@@ -347,7 +349,7 @@ impl Instruments {
                             file!(),
                             line!(),
                             instrument.get_name(),
-                            instrument.get_code(),
+                            instrument.get_code_str(),
                         )
                     })?;
                     if !currencies.contains(&currency) {
@@ -361,7 +363,7 @@ impl Instruments {
                             file!(),
                             line!(),
                             instrument.get_name(),
-                            instrument.get_code(),
+                            instrument.get_code_str(),
                         )
                     })?;
                     if !currencies.contains(&currency) {
@@ -460,7 +462,7 @@ impl Instruments {
         &'a self,
         match_parameter: &'a MatchParameter,
     ) -> Result<Vec<StaticId>> {
-        let mut res = Vec::<ID>::new();
+        let mut res = Vec::<StaticId>::new();
         let dummy_id = StaticId::default();
         for instrument in self.instruments.iter() {
             let discount_curve_id = match_parameter.get_discount_curve_id(instrument)?;
@@ -469,21 +471,21 @@ impl Instruments {
             }
             let collateral_curve_ids = match_parameter.get_collateral_curve_ids(instrument)?;
             for id in collateral_curve_ids.iter() {
-                if !res.contains(id) && *id != &dummy_id {
+                if !res.contains(id) && *id != dummy_id {
                     res.push(*id);
                 }
             }
             let rate_index_curve_id = match_parameter.get_rate_index_curve_id(instrument)?;
-            if !res.contains(&rate_index_curve_name) && rate_index_curve_name != &dummy {
-                res.push(rate_index_curve_name);
+            if !res.contains(&rate_index_curve_id) && rate_index_curve_id != dummy_id {
+                res.push(rate_index_curve_id);
             }
-            let crs_curve_name = match_parameter.get_crs_curve_name(instrument)?;
-            if !res.contains(&crs_curve_name) && crs_curve_name != &dummy {
+            let crs_curve_name = match_parameter.get_crs_curve_id(instrument)?;
+            if !res.contains(&crs_curve_name) && crs_curve_name != dummy_id {
                 res.push(crs_curve_name);
             }
             let floating_crs_curve_name =
-                match_parameter.get_floating_crs_curve_name(instrument)?;
-            if !res.contains(&floating_crs_curve_name) && floating_crs_curve_name != &dummy {
+                match_parameter.get_floating_crs_curve_id(instrument)?;
+            if !res.contains(&floating_crs_curve_name) && floating_crs_curve_name != dummy_id {
                 res.push(floating_crs_curve_name);
             }
         }
@@ -676,52 +678,52 @@ impl Instruments {
         }
     }
 
-    pub fn get_all_inst_code_clone(
+    pub fn get_all_inst_id(
         &self,
         instruments: Option<&Vec<Rc<Instrument>>>,
-    ) -> Vec<String> {
+    ) -> Vec<StaticId> {
         match instruments {
             Some(instruments) => {
                 let mut res = Vec::<String>::new();
                 for instrument in instruments.iter() {
-                    res.push(instrument.get_code().clone());
+                    res.push(instrument.get_code_str());
                 }
                 res
             }
             None => {
                 let mut res = Vec::<String>::new();
                 for instrument in self.instruments.iter() {
-                    res.push(instrument.get_code().clone());
+                    res.push(instrument.get_code_str().clone());
                 }
                 res
             }
         }
     }
 
-    pub fn get_all_unerlying_codes_requiring_volatility(
+    pub fn get_all_unerlying_ids_requiring_volatility(
         &self,
         instruments: Option<&Vec<Rc<Instrument>>>,
-    ) -> Vec<String> {
+    ) -> Vec<StaticId> {
         match instruments {
             Some(instruments) => {
-                let mut res = Vec::<String>::new();
+                let mut res = Vec::<StaticId>::new();
                 for instrument in instruments.iter() {
-                    let names = instrument.get_underlying_codes_requiring_volatility();
-                    for name in names.iter() {
-                        if !res.contains(name) {
-                            res.push(String::clone(name));
+                    let ids = instrument.get_underlying_ids_requiring_volatility();
+                    for id in ids.iter() {
+                        if !res.contains(id) {
+                            res.push(*id);
                         }
                     }
                 }
                 res
             }
             None => {
-                let mut res = Vec::<String>::new();
+                let mut res = Vec::<StaticId>::new();
                 for instrument in self.instruments.iter() {
-                    let names = instrument.get_underlying_codes_requiring_volatility();
-                    for name in names.iter() {
-                        if !res.contains(name) {
-                            res.push(String::clone(name));
+                    let ids = instrument.get_underlying_ids_requiring_volatility();
+                    for id in ids.iter() {
+                        if !res.contains(id) {
+                            res.push(*id);
                         }
                     }
                 }
@@ -733,10 +735,8 @@ impl Instruments {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
-    use crate::currency::{Currency, FxCode};
+    use crate::currency::Currency;
     use crate::instruments::futures::Futures;
     use crate::instruments::plain_swap::PlainSwap;
     use crate::parameters::rate_index::RateIndex;
@@ -747,58 +747,92 @@ mod tests {
         calendars::southkorea::{SouthKorea, SouthKoreaType},
         jointcalendar::JointCalendar,
     };
+    use crate::InstType;
     use anyhow::Result;
     use time::macros::datetime;
 
     #[test]
     fn test_instruments() -> Result<()> {
+        let kospi_und_id = StaticId::from_str("KOSPI2", "KRX");
+        let inst_id = StaticId::from_str("KOSPI2 FUT", "KRX");
+
+        let issue_date = datetime!(2022-01-01 09:00:00 UTC);  
+        let maturity = datetime!(2022-12-01 09:00:00 UTC);
+        let inst_info = InstInfo {
+            id: inst_id,
+            name: "KOSPI2 FUT".to_string(),
+            inst_type: InstType::Futures,
+            currency: Currency::KRW,
+            unit_notional: 250_000.0,
+            issue_date: Some(issue_date),
+            maturity: Some(maturity),
+            accounting_level: AccountingLevel::L1,
+        };
+        
         let fut1 = Futures::new(
+            inst_info,
             340.0,
-            datetime!(2022-01-01 09:00:00 UTC),
-            datetime!(2022-12-01 09:00:00 UTC),
-            datetime!(2022-12-01 09:00:00 UTC),
-            datetime!(2022-12-01 09:00:00 UTC),
-            250_000.0,
+            None,
             Currency::KRW,
-            Currency::KRW,
-            "KOSPI2".to_string(),
-            "KOSPI2 FUT".to_string(),
-            "165XXX".to_string(),
+            kospi_und_id,
         );
 
+        let issue_date = datetime!(2022-12-01 09:00:00 UTC);
+        let maturity = datetime!(2024-03-01 09:00:00 UTC);
+        let inst_id = StaticId::from_str("SPX FUT", "CME");
+        let spx_und_id = StaticId::from_str("SPX", "CME");
+        let inst_info = InstInfo {
+            id: inst_id,
+            name: "SPX FUT".to_string(),
+            inst_type: InstType::Futures,
+            currency: Currency::USD,
+            unit_notional: 50.0,
+            issue_date: Some(issue_date),
+            maturity: Some(maturity),
+            accounting_level: AccountingLevel::L1,
+        };
+
         let fut2 = Futures::new(
+            inst_info,
             5000.0,
-            datetime!(2022-12-01 09:00:00 UTC),
-            datetime!(2024-03-01 09:00:00 UTC),
-            datetime!(2024-03-01 09:00:00 UTC),
-            datetime!(2024-03-01 09:00:00 UTC),
-            50.0,
+            None,
             Currency::USD,
-            Currency::USD,
-            "SPX".to_string(),
-            "SPX FUT".to_string(),
-            "ESH24".to_string(),
+            spx_und_id,
         );
 
         let sk = SouthKorea::new(SouthKoreaType::Settlement);
         let _sk = Calendar::SouthKorea(sk);
 
+        let rate_id = StaticId::from_str("CD 91D", "KRX");
+        let rate_tenor = crate::Tenor::new_from_string("91D")?;
         let rate_index = RateIndex::new(
-            String::from("91D"),
+            rate_id,
+            rate_tenor,
             Currency::KRW,
             String::from("CD 91D"),
-            "CD 91D".to_string(),
         )?;
 
-        // make SouthKorea(SouthKorea::Settlement) JointCalendar
         let sk = SouthKorea::new(SouthKoreaType::Settlement);
         let sk = Calendar::SouthKorea(sk);
         let joint_calendar = JointCalendar::new(vec![sk])?;
 
         let issue_date = datetime!(2021-01-01 09:00:00 UTC);
         let maturity_date = datetime!(2021-12-31 09:00:00 UTC);
+
+        let swap_id = StaticId::from_str("KRW IRS Code", "KRX");
+        let swap_info = InstInfo {
+            id: swap_id,
+            name: "KRW IRS".to_string(),
+            inst_type: InstType::PlainSwap,
+            currency: Currency::KRW,
+            unit_notional: 10_000_000_000.0,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity_date),
+            accounting_level: AccountingLevel::L2,
+        };
+
         let irs = PlainSwap::new_from_conventions(
-            Currency::KRW,
+            inst_info,
             Currency::KRW,
             //
             None,
@@ -806,10 +840,7 @@ mod tests {
             None,
             None,
             //
-            10_000_000_000.0,
             issue_date.clone(),
-            issue_date.clone(),
-            maturity_date.clone(),
             //
             Some(0.02),
             Some(rate_index.clone()),
@@ -827,8 +858,6 @@ mod tests {
             0,
             //
             joint_calendar,
-            "KRW IRS".to_string(),
-            "KRW IRS code".to_string(),
         )?;
 
         // make Instrument using fut1, fut2, irs
@@ -839,23 +868,23 @@ mod tests {
         ]);
 
         // make MatchParameter
-        let mut collateral_curve_map = HashMap::<String, String>::new();
-        let mut rate_index_curve_map = HashMap::<String, String>::new();
-        let borrowing_curve_map = HashMap::<String, String>::new();
-        let bond_curve_map = HashMap::<(String, IssuerType, CreditRating, Currency), String>::new();
+        let mut collateral_curve_map = FxHashMap::<StaticId, StaticId>::default();
+        let mut rate_index_curve_map = FxHashMap::<StaticId, StaticId>::default();
+        let borrowing_curve_map = FxHashMap::<StaticId, StaticId>::default();
+        let bond_curve_map = FxHashMap::<(StaticId, IssuerType, CreditRating, Currency), StaticId>::default();
 
-        let mut crs_curve_map = HashMap::<Currency, String>::new();
+        let mut crs_curve_map = FxHashMap::<Currency, StaticId>::default();
         // "KOSPI2" -> "KRWGOV"
         // "SPX" -> "USGOV"
         // RateIndexCode::CD -> "KRWIRS"
-        collateral_curve_map.insert("KOSPI2".to_string(), "KRWGOV".to_string());
-        collateral_curve_map.insert("SPX".to_string(), "USDGOV".to_string());
-        rate_index_curve_map.insert("CD 91D".to_string(), "KRWIRS".to_string());
-        crs_curve_map.insert(Currency::KRW, "KRWCRS".to_string());
-        crs_curve_map.insert(Currency::USD, "USDOIS".to_string());
+        collateral_curve_map.insert(kospi_und_id, StaticId::from_str("KRWGOV", "KAP"));
+        collateral_curve_map.insert(spx_und_id, StaticId::from_str("USGOV", "KAP"));
+        rate_index_curve_map.insert(rate_id, StaticId::from_str("KRWIRS", "KAP"));
+        crs_curve_map.insert(Currency::KRW, StaticId::from_str("KRWCRS", "KAP"));
+        crs_curve_map.insert(Currency::USD, StaticId::from_str("USDCRS", "KAP"));
 
-        let funding_cost_map = HashMap::<Currency, String>::new();
-        let crs_curve_map = HashMap::<Currency, String>::new();
+        let funding_cost_map = FxHashMap::<Currency, StaticId>::default();
+        let crs_curve_map = FxHashMap::<Currency, StaticId>::default();
         let match_parameter = MatchParameter::new(
             collateral_curve_map,
             borrowing_curve_map,
@@ -866,14 +895,19 @@ mod tests {
         );
 
         // test get_all_underlying_codes
-        let underlying_codes = instruments.get_all_underlying_codes();
+        let underlying_codes = instruments.get_all_underlying_ids();
         assert_eq!(
             underlying_codes,
-            vec![&"KOSPI2".to_string(), &"SPX".to_string()]
+            vec![
+                StaticId::from_str("KOSPI2", "KRX"),
+                StaticId::from_str("SPX", "CME"),
+            ]
         );
         // test instruments_with_underlying
         let instruments_with_kospi2 =
-            instruments.instruments_with_underlying(&"KOSPI2".to_string(), None);
+            instruments.instruments_with_underlying(
+                StaticId::from_str("KOSPI2", "KRX"),
+                None);
 
         assert_eq!(fut1.get_code(), instruments_with_kospi2[0].get_code());
         assert_eq!(fut1.get_name(), instruments_with_kospi2[0].get_name());
@@ -883,22 +917,33 @@ mod tests {
         );
 
         // test get_all_curve_names
-        let all_curve_names = instruments.get_all_curve_names(&match_parameter)?;
-        assert_eq!(all_curve_names, vec![&"KRWGOV", &"USDGOV", &"KRWIRS"]);
+        let all_curve_ids = instruments.get_all_curve_ids(&match_parameter)?;
+        assert_eq!(
+            all_curve_ids, 
+            vec![
+                StaticId::from_str("KRWGOV", "KAP"),
+                StaticId::from_str("USGOV", "KAP"),
+                StaticId::from_str("KRWIRS", "KAP"),
+            ]   
+        );
+          
         // test instruments_using_curve
         let instruments_using_krw_gov =
-            instruments.instruments_using_curve(&"KRWGOV".to_string(), &match_parameter, None)?;
+            instruments.instruments_using_curve(StaticId::from_str("KRWGOV", "KAP"), &match_parameter, None)?;
 
         assert_eq!(fut1.get_code(), instruments_using_krw_gov[0].get_code());
 
         // test discount curve
         let instruments_using_krw_irs =
-            instruments.instruments_using_curve(&"KRWIRS".to_string(), &match_parameter, None)?;
+            instruments.instruments_using_curve(
+                StaticId::from_str("KRWIRS", "KAP"),
+                &match_parameter, 
+                None)?;
 
         assert_eq!(irs.get_code(), instruments_using_krw_irs[0].get_code());
 
         // test instruments_with_currency
-        let instruments_with_krw = instruments.instruments_with_currency(&Currency::KRW);
+        let instruments_with_krw = instruments.instruments_with_currency(Currency::KRW);
         assert_eq!(fut1.get_code(), instruments_with_krw[0].get_code());
         assert_eq!(irs.get_code(), instruments_with_krw[1].get_code());
 

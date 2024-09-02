@@ -96,7 +96,7 @@ impl InstInfo {
     }
 
     #[inline]
-    pub fn symbol_str(&self) -> &str {
+    pub fn code_str(&self) -> &str {
         self.id.get_id().code.as_str()
     }
 

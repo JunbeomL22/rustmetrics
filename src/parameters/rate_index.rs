@@ -58,7 +58,7 @@ impl RateIndex {
         &self.name
     }
 
-    pub fn get_rate_index_symbol_str(&self) -> &str {
+    pub fn get_rate_index_code_str(&self) -> &str {
         self.id.code_str()
     }
 

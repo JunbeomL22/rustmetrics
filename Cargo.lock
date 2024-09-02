@@ -1083,9 +1083,9 @@ checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
 name = "static-id"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6688328eeb8c5b1f3ae33610a26fd7aed0092474021ce2d3d84ba76d9104b4f"
+checksum = "3f4b9c3c54f4cc843df78bd76551bcd7360559d86aeebe1b4d90384386ce89bd"
 dependencies = [
  "criterion",
  "dashmap",

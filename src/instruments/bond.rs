@@ -14,7 +14,11 @@ use static_id::StaticId;
 //
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell, 
+    rc::Rc
+};
+use rustc_hash::FxHashMap;
 use time::OffsetDateTime;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -348,8 +352,8 @@ impl InstrumentTrait for Bond {
         pricing_date: &OffsetDateTime,
         forward_curve: Option<Rc<RefCell<ZeroCurve>>>,
         past_data: Option<Rc<DailyClosePrice>>,
-    ) -> Result<HashMap<OffsetDateTime, Real>> {
-        let mut res = HashMap::new();
+    ) -> Result<FxHashMap<OffsetDateTime, Real>> {
+        let mut res = FxHashMap::default();
         for base_schedule in self.schedule.iter() {
             let payment_date = base_schedule.get_payment_date();
             if payment_date.date() < pricing_date.date() {

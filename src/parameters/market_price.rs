@@ -9,7 +9,7 @@ use std::rc::Rc;
 use time::OffsetDateTime;
 use static_id::StaticId;
 use flashlog::{
-    debug,
+    log_debug,
     lazy_string::LazyString,
 };
 
@@ -56,8 +56,12 @@ impl MarketPrice {
         self.value = price;
     }
 
-    pub fn get_code(&self) -> &String {
-        &self.code
+    pub fn get_code_str(&self) -> &str {
+        self.id.code_str()
+    }
+
+    pub fn get_id(&self) -> StaticId {
+        self.id
     }
 
     pub fn get_value(&self) -> Real {
@@ -93,26 +97,48 @@ impl MarketPrice {
         if let Some(dividend) = &self.dividend {
             let eval_dt = date.get_date_clone();
             if self.market_datetime < eval_dt {
-                for (date, div) in dividend.borrow().get_dividend_ratio().iter() {
-                    if (*date > self.market_datetime) && (*date <= eval_dt) {
+                let div_ratio = dividend.borrow().get_dividend_ratio();
+                // might be better to use clone()?
+                for (date, div) in div_ratio.into_iter() {
+                    if (date > self.market_datetime) && (date <= eval_dt) {
                         self.value *= 1.0 - div;
-                        debug!(
-                            "\n{} ({}) is DEDUCTED from dividens by {} on {}\n\
-                            evaluation_date: {:?}, value: {}\n",
-                            self.name, self.code, div, &date, &eval_dt, &self.value
-                        );
+                        let date_clone = date.clone();
+                        let eval_dt_clone = eval_dt.clone();
+                        let name = self.name.clone();
+                        let id = self.id;
+                        let value = self.value;
+                        let msg = LazyString::new(move || {
+                            format!(
+                                "\n{} ({}) is DEDUCTED from dividens by {} on {}\n\
+                                evaluation_date: {:?}, value: {}\n",
+                                name, id, div, date_clone, eval_dt_clone, value
+                            )
+                        });
+
+                        log_debug!("short maturity", message = msg);
                     }
                 }
                 self.market_datetime = eval_dt;
             } else {
-                for (date, div) in dividend.borrow().get_dividend_ratio().iter() {
-                    if (*date > eval_dt) && (*date <= self.market_datetime) {
+                let div_ratio = dividend.borrow().get_dividend_ratio();
+                // might be better to use clone()?
+                for (date, div) in div_ratio.into_iter() {
+                    if (date > eval_dt) && (date <= self.market_datetime) {
                         self.value /= 1.0 - div;
-                        debug!(
-                            "\n{} ({}) div deduction is ROLLED back by {} on {}\n\
-                            evluation_date: {:?}, value: {}\n",
-                            self.name, self.code, div, &date, &eval_dt, &self.value
-                        );
+                        let date_clone = date.clone();
+                        let eval_dt_clone = eval_dt.clone();
+                        let name_str = self.name.clone();
+                        let id = self.id;
+                        let value = self.value;
+                        let msg = LazyString::new(move || {
+                            format!(
+                                "\n{} ({}) div deduction is ROLLED back by {} on {}\n\
+                                evluation_date: {:?}, value: {}\n",
+                                name_str, id, div, date_clone, eval_dt_clone, value
+                            )
+                        });
+
+                        log_debug!("short maturity", message = msg);
                     }
                 }
                 self.market_datetime = eval_dt;
@@ -209,7 +235,7 @@ mod tests {
             Some(Rc::new(RefCell::new(dividend))),
             Currency::KRW,
             "MockMarketPrice".to_string(),
-            "MockCode".to_string(),
+            StaticId::from_str("MockCode", ""),
         )));
 
         evaluation_date

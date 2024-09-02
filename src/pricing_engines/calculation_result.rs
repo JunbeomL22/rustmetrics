@@ -619,11 +619,15 @@ mod tests {
         instrument::Instrument,
         instruments::{futures::Futures, inst_info::InstInfo},
     };
+    use crate::{
+        InstType,
+        AccountingLevel,
+    };
     use time::macros::datetime;
 
     #[test]
     fn test_calculation_result() {
-        let instrument = InstrumentInfo::default();
+        let instrument = InstInfo::default();
         let evaluation_date = datetime!(2021-01-01 00:00:00 +00:00);
         let mut result = CalculationResult::new(instrument, evaluation_date);
         result.set_npv(NpvResult::new_from_npv(100.0));
@@ -633,18 +637,27 @@ mod tests {
 
     #[test] // test serialization
     fn test_calculation_result_serialization() {
+        let und_id = StaticId::from_str("KOSPI2", "KRX");
+        let inst_id = StaticId::from_str("KOSPI2 Fut", "KRX");
+        let issue_date = datetime!(2021-01-01 09:00:00 +09:00);
+        let maturity = datetime!(2022-01-01 15:40:00 +09:00);
+        let inst_info = InstInfo {
+            id: inst_id,
+            name: "KOSPI2 Fut".to_string(),
+            inst_type: InstType::Futures,
+            currency: Currency::KRW,
+            unit_notional: 250_000.0,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.clone()),
+            accounting_level: AccountingLevel::L1,
+        };
+
         let equity_futures = Futures::new(
+            inst_info,
             300.0,
-            datetime!(2021-01-01 09:00:00 +09:00),
-            datetime!(2022-01-01 15:40:00 +09:00),
-            datetime!(2022-01-01 15:40:00 +09:00),
-            datetime!(2022-01-01 15:40:00 +09:00),
-            250_000.0,
+            None,
             Currency::KRW,
-            Currency::KRW,
-            "KOSPI200".to_string(),
-            "KOSPI200".to_string(),
-            "KOSPI200".to_string(),
+            und_id,
         );
 
         let inst = Instrument::Futures(equity_futures);
@@ -655,14 +668,16 @@ mod tests {
         let type_name = fut_trait.get_type_name();
         let maturity = fut_trait.get_maturity();
 
-        let instrument = InstrumentInfo::new(
+        
+
+        let instrument = InstInfo {
             name.clone(),
             code.clone(),
             type_name,
-            *fut_trait.get_currency(),
+            fut_trait.get_currency(),
             fut_trait.get_unit_notional(),
             maturity,
-        );
+        };
 
         let evaluation_date = datetime!(2021-01-01 00:00:00 +00:00);
         let mut result = CalculationResult::new(instrument, evaluation_date);

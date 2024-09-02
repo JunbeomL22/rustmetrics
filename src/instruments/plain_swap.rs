@@ -10,7 +10,8 @@ use crate::time::{calendar_trait::CalendarTrait, jointcalendar::JointCalendar};
 use crate::InstInfo;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
+use rustc_hash::FxHashMap;
 use time::{Duration, OffsetDateTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Hash, Copy)]
@@ -455,8 +456,8 @@ impl InstrumentTrait for PlainSwap {
     fn get_fixed_cashflows(
         &self,
         pricing_date: &OffsetDateTime,
-    ) -> Result<HashMap<OffsetDateTime, Real>> {
-        let mut res = HashMap::new();
+    ) -> Result<FxHashMap<OffsetDateTime, Real>> {
+        let mut res = FxHashMap::default();
         let initial_value = self.initial_fixed_side_endorsement.unwrap_or(1.0);
 
         if self.effective_date.date() >= pricing_date.date()
@@ -504,8 +505,8 @@ impl InstrumentTrait for PlainSwap {
         pricing_date: &OffsetDateTime,
         forward_curve: Option<Rc<RefCell<ZeroCurve>>>,
         past_fixing_data: Option<Rc<DailyClosePrice>>,
-    ) -> Result<HashMap<OffsetDateTime, Real>> {
-        let mut res = HashMap::new();
+    ) -> Result<FxHashMap<OffsetDateTime, Real>> {
+        let mut res = FxHashMap::default();
         let mut initial_value = 1.0;
         if self.effective_date.date() >= pricing_date.date()
             && self.initial_floating_side_payment.is_some()

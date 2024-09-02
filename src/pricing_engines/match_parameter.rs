@@ -39,9 +39,7 @@ pub struct MatchParameter {
 impl Default for MatchParameter {
     fn default() -> MatchParameter {
         let collateral_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
-
         let borrowing_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
-
         let bond_discount_curve_map: FxHashMap<(StaticId, IssuerType, CreditRating, Currency), StaticId> = FxHashMap::default();
 
         let crs_curve_map: FxHashMap<Currency, StaticId> = FxHashMap::default();
@@ -92,7 +90,7 @@ impl MatchParameter {
                     .ok_or_else(|| anyhow!(
                         "({}:{}) {} ({}) has {}, but its crs curve is not found in MatchParameter.crs_curve_map",
                         file!(), line!(),
-                        instrument.get_name(), instrument.get_code(),
+                        instrument.get_name(), instrument.get_code_str(),
                         fixed_currency.as_str(),
                     ))?;
                 Ok(*res)
@@ -103,7 +101,7 @@ impl MatchParameter {
                     .ok_or_else(|| anyhow!(
                         "({}:{}) {} ({}) has {}, but its crs curve is not found in MatchParameter.crs_curve_map",
                         file!(), line!(),
-                        instrument.get_name(), instrument.get_code(),
+                        instrument.get_name(), instrument.get_code_str(),
                         currency.as_str()
                     ))?;
                 Ok(*res)
@@ -124,7 +122,7 @@ impl MatchParameter {
                     .ok_or_else(|| anyhow!(
                         "({}:{}) {} ({}) has {}, but it is not found in MatchParameter.crs_curve_map",
                         file!(), line!(),
-                        instrument.get_name(), instrument.get_code(),
+                        instrument.get_name(), instrument.get_code_str(),
                         floating_currency.as_str()
                     ))?;
                 Ok(*res)
@@ -135,7 +133,7 @@ impl MatchParameter {
                     .ok_or_else(|| anyhow!(
                         "({}:{}) {} ({}) has {}, but it is not found in MatchParameter.crs_curve_map",
                         file!(), line!(),
-                        instrument.get_name(), instrument.get_code(),
+                        instrument.get_name(), instrument.get_code_str(),
                         underlying_currency.as_str()
                     ))?;
                 Ok(*res)
@@ -175,7 +173,7 @@ impl MatchParameter {
                             Some(curve_id) => Ok(*curve_id),
                             None => Err(anyhow!(
                                 "Rate index forward curve is not found for {:?}",
-                                rate_index.get_rate_index_symbol_str(),
+                                rate_index.get_rate_index_code_str(),
                             )),
                         }
                     }
@@ -191,7 +189,7 @@ impl MatchParameter {
                                 Err(anyhow!(
                                     "({}:{}) Risk free rate curve is not found for {} ({}).\n\
                                     The Option's currency is {:?} but its curve is not found in MatchParameter.funding_cost",
-                                    file!(), line!(), instrument.get_name(), instrument.get_code(), instrument.get_currency(),
+                                    file!(), line!(), instrument.get_name(), instrument.get_code_str(), instrument.get_currency(),
                                 ))
                             }
                         }

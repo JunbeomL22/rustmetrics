@@ -77,7 +77,7 @@ impl PricerFactory {
                     "({}:{})   pricer for {} ({}) is not implemented yet",
                     file!(),
                     line!(),
-                    instrument.get_code(),
+                    instrument.get_id(),
                     instrument.get_type_name(),
                 ));
             }
@@ -96,8 +96,8 @@ impl PricerFactory {
                     failed to get discount curve of {}. self.zero_curves does not have {:?}",
                     file!(),
                     line!(),
-                    instrument.get_symbol_str(),
-                    discount_curve_id.symbol_str(),
+                    instrument.get_id(),
+                    discount_curve_id.get_id(),
                 )
             })?
             .clone();
@@ -109,16 +109,15 @@ impl PricerFactory {
                 None
             }
             Some(_) => {
-                let forward_curve_name =
-                    self.match_parameter.get_rate_index_curve_name(instrument)?;
+                let forward_curve_id = self.match_parameter.get_rate_index_curve_id(instrument)?;
                 let res = self
                     .zero_curves
-                    .get(forward_curve_name)
+                    .get(&forward_curve_id)
                     .ok_or_else(|| {
                         anyhow::anyhow!(
                             "failed to get forward curve of {}.\nself.zero_curves does not have {}",
-                            instrument.get_code(),
-                            forward_curve_name,
+                            instrument.get_id(),
+                            forward_curve_id,
                         )
                     })?
                     .clone();
@@ -129,12 +128,12 @@ impl PricerFactory {
         let past_fixing_data = match rate_index {
             None => None,
             Some(rate_index) => {
-                let past_fixing_data = self.past_close_data.get(rate_index.get_name())
+                let past_fixing_data = self.past_close_data.get(&rate_index.get_id())
                     .ok_or_else(
                         || anyhow::anyhow!(
                             "failed to get past fixing data of {}.\nself.past_close_data does not have {}",
-                            instrument.get_code(),
-                            rate_index.get_code(),
+                            instrument.get_id(),
+                            rate_index.get_id(),
                         ))?.clone();
                 Some(past_fixing_data)
             }
@@ -148,33 +147,32 @@ impl PricerFactory {
         );
         Ok(Pricer::BondPricer(core))
     }
+    
     fn get_futures_pricer(&self, instrument: &Rc<Instrument>) -> Result<Pricer> {
-        let underlying_codes = instrument.get_underlying_codes();
-        let equity = self.equities.get(underlying_codes[0]).unwrap().clone();
-        let collatral_curve_name = self
-            .match_parameter
-            .get_collateral_curve_names(instrument)?[0];
-        let borrowing_curve_name = self.match_parameter.get_borrowing_curve_names(instrument)?[0];
+        let underlying_ids = instrument.get_underlying_ids();
+        let equity = self.equities.get(&underlying_ids[0]).unwrap().clone();
+        let collatral_curve_id = self.match_parameter.get_collateral_curve_ids(instrument)?[0];
+        let borrowing_curve_id = self.match_parameter.get_borrowing_curve_ids(instrument)?[0];
         let core = FuturesPricer::new(
             //self.evaluation_date.clone(),
             equity,
             self.zero_curves
-                .get(collatral_curve_name)
+                .get(&collatral_curve_id)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "failed to get collateral curve of {}.\nself.zero_curves does not have {}",
-                        instrument.get_code(),
-                        collatral_curve_name,
+                        instrument.get_id(),
+                        collatral_curve_id,
                     )
                 })?
                 .clone(),
             self.zero_curves
-                .get(borrowing_curve_name)
+                .get(&borrowing_curve_id)
                 .ok_or_else(|| {
                     anyhow::anyhow!(
                         "failed to get borrowing curve of {}.\nself.zero_curves does not have {}",
-                        instrument.get_code(),
-                        borrowing_curve_name,
+                        instrument.get_id(),
+                        borrowing_curve_id,
                     )
                 })?
                 .clone(),
@@ -185,55 +183,54 @@ impl PricerFactory {
     fn get_vanilla_option_pricer(&self, instrument: &Rc<Instrument>) -> Result<Pricer> {
         let equity = self
             .equities
-            .get(instrument.get_underlying_codes()[0])
+            .get(&instrument.get_underlying_ids()[0])
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "({}:{}) failed to get equity of {}.\nself.equities does not have {}",
                     file!(),
                     line!(),
-                    instrument.get_code(),
-                    instrument.get_underlying_codes()[0],
+                    instrument.get_id(),
+                    instrument.get_underlying_ids()[0],
                 )
             })?
             .clone();
-        let volatility = self.underlying_volatilities.get(instrument.get_underlying_codes()[0])
+        let volatility = self.underlying_volatilities.get(&instrument.get_underlying_ids()[0])
             .ok_or_else(|| anyhow::anyhow!(
                 "({}:{}) failed to get volatility of {}.\nself.equity_volatilities does not have {}",
-                file!(), line!(), instrument.get_code(), instrument.get_underlying_codes()[0],
+                file!(), line!(), instrument.get_id(), instrument.get_underlying_ids()[0],
             ))?.clone();
-        let discount_curve_name = self.match_parameter.get_discount_curve_name(instrument)?;
+        let discount_curve_id = self.match_parameter.get_discount_curve_id(instrument)?;
         let discount_curve = self
-            .zero_curves
-            .get(discount_curve_name)
+            .zero_curves.get(&discount_curve_id)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                 "({}:{}) failed to get discount curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), discount_curve_name,
+                file!(), line!(), instrument.get_id(), discount_curve_id,
             )
             })?
             .clone();
 
-        let collateral_curve_name = self
+        let collateral_curve_id = self
             .match_parameter
-            .get_collateral_curve_names(instrument)?[0];
+            .get_collateral_curve_ids(instrument)?[0];
         let collatral_curve = self
             .zero_curves
-            .get(collateral_curve_name)
+            .get(&collateral_curve_id)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                 "({}:{}) failed to get collateral curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), collateral_curve_name,
+                file!(), line!(), instrument.get_id(), collateral_curve_id,
             )
             })?
             .clone();
-        let borrowing_curve_name = self.match_parameter.get_borrowing_curve_names(instrument)?[0];
+        let borrowing_curve_id = self.match_parameter.get_borrowing_curve_ids(instrument)?[0];
         let borrowing_curve = self
             .zero_curves
-            .get(borrowing_curve_name)
+            .get(&borrowing_curve_id)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                 "({}:{}) failed to get borrowing curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), borrowing_curve_name,
+                file!(), line!(), instrument.get_id(), borrowing_curve_id,
             )
             })?
             .clone();
@@ -242,8 +239,8 @@ impl PricerFactory {
         let und_curr = instrument.get_underlying_currency()?;
         let quanto = match und_curr == curr {
             false => {
-                let fx_code = FxCode::new(*und_curr, *curr);
-                let underlying_code = instrument.get_underlying_codes()[0].clone();
+                let fx_code = FxCode::new(und_curr, curr);
+                let underlying_code = instrument.get_underlying_ids()[0].clone();
                 let key = (underlying_code, fx_code);
                 let quanto =
                     self.quantos
@@ -251,7 +248,7 @@ impl PricerFactory {
                         .ok_or_else(|| {
                             anyhow::anyhow!(
                         "({}:{}) failed to get quanto of {}.\nself.quantos does not have {:?}",
-                        file!(), line!(), instrument.get_code(), key,
+                        file!(), line!(), instrument.get_id(), key,
                     )
                         })?
                         .clone();
@@ -278,30 +275,24 @@ impl PricerFactory {
     }
 
     fn get_ktbf_pricer(&self, instrument: &Rc<Instrument>) -> Result<Pricer> {
-        let discount_curve_name = String::from("KRWGOV");
+        let discount_curve_id = StaticId::from_str("KRWGOV", "KAP");
         let discount_curve = self
             .zero_curves
-            .get(&discount_curve_name)
+            .get(&discount_curve_id)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                 "({}:{}) failed to get discount curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), discount_curve_name,
+                file!(), line!(), instrument.get_id(), discount_curve_id,
             )
             })?
             .clone();
-        let collateral_curve_name = self
-            .match_parameter
-            .get_collateral_curve_names(instrument)?[0];
-        let collateral_curve = self
-            .zero_curves
-            .get(collateral_curve_name)
+        let collateral_curve_id = self.match_parameter.get_collateral_curve_ids(instrument)?[0];
+        let collateral_curve = self.zero_curves.get(&collateral_curve_id)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                 "({}:{}) failed to get collateral curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), collateral_curve_name,
-            )
-            })?
-            .clone();
+                file!(), line!(), instrument.get_id(), collateral_curve_id,
+            )})?.clone();
         let core = KtbfPricer::new(
             self.evaluation_date.clone(),
             discount_curve,
@@ -322,24 +313,22 @@ impl PricerFactory {
                     "({}:{}) failed to get FX of {}.\nself.fxs does not have {:?}",
                     file!(),
                     line!(),
-                    instrument.get_code(),
+                    instrument.get_id(),
                     fx_code,
                 )
             })?
             .clone();
-        let underlying_currency_curve_name = self
-            .match_parameter
-            .get_floating_crs_curve_name(instrument)?;
-        let underlying_currency_curve = self.zero_curves.get(underlying_currency_curve_name)
+        let underlying_currency_curve_id = self.match_parameter.get_floating_crs_curve_id(instrument)?;
+        let underlying_currency_curve = self.zero_curves.get(&underlying_currency_curve_id)
             .ok_or_else(|| anyhow::anyhow!(
                 "({}:{}) failed to get underlying currency curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), underlying_currency_curve_name,
+                file!(), line!(), instrument.get_id(), underlying_currency_curve_id,
             ))?.clone();
-        let futures_currency_curve_name = self.match_parameter.get_crs_curve_name(instrument)?;
-        let futures_currency_curve = self.zero_curves.get(futures_currency_curve_name)
+        let futures_currency_curve_id = self.match_parameter.get_crs_curve_id(instrument)?;
+        let futures_currency_curve = self.zero_curves.get(&futures_currency_curve_id)
             .ok_or_else(|| anyhow::anyhow!(
                 "({}:{}) failed to get futures currency curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), futures_currency_curve_name,
+                file!(), line!(), instrument.get_id(), futures_currency_curve_id,
             ))?.clone();
 
         let core = FxFuturesPricer::new(
@@ -352,31 +341,30 @@ impl PricerFactory {
     }
 
     fn get_plain_swap_pricer(&self, instrument: &Rc<Instrument>) -> Result<Pricer> {
-        let fixed_leg_discount_curve_name = self.match_parameter.get_crs_curve_name(instrument)?;
-        let fixed_leg_discount_curve = self.zero_curves.get(fixed_leg_discount_curve_name)
+        let fixed_leg_discount_curve_id = self.match_parameter.get_crs_curve_id(instrument)?;
+        let fixed_leg_discount_curve = self.zero_curves.get(&fixed_leg_discount_curve_id)
             .ok_or_else(|| anyhow::anyhow!(
                 "({}:{}) failed to get fixed leg discount curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), fixed_leg_discount_curve_name,
+                file!(), line!(), instrument.get_id(), fixed_leg_discount_curve_id,
             ))?.clone();
 
-        let floating_leg_discount_curve_name = self
+        let floating_leg_discount_curve_id = self
             .match_parameter
-            .get_floating_crs_curve_name(instrument)?;
-        let floating_leg_discount_curve = self.zero_curves.get(floating_leg_discount_curve_name)
+            .get_floating_crs_curve_id(instrument)?;
+        let floating_leg_discount_curve = self.zero_curves.get(&floating_leg_discount_curve_id)
             .ok_or_else(|| anyhow::anyhow!(
                 "({}:{}) failed to get floating leg discount curve of {}.\nself.zero_curves does not have {}",
-                file!(), line!(), instrument.get_code(), floating_leg_discount_curve_name,
+                file!(), line!(), instrument.get_id(), floating_leg_discount_curve_id,
             ))?.clone();
 
         let rate_index = instrument.get_rate_index()?;
         let forward_curve = match rate_index {
             Some(_) => {
-                let forward_curve_name =
-                    self.match_parameter.get_rate_index_curve_name(instrument)?;
-                let res = self.zero_curves.get(forward_curve_name)
+                let forward_curve_id = self.match_parameter.get_rate_index_curve_id(instrument)?;
+                let res = self.zero_curves.get(&forward_curve_id)
                     .ok_or_else(|| anyhow::anyhow!(
                         "({}:{}) failed to get forward curve of {}.\nself.zero_curves does not have {}",
-                        file!(), line!(), instrument.get_code(), forward_curve_name,
+                        file!(), line!(), instrument.get_id(), forward_curve_id,
                     ))?.clone();
                 Some(res)
             }
@@ -385,10 +373,10 @@ impl PricerFactory {
 
         let past_fixig_data = match rate_index {
             Some(rate_index) => {
-                let past_fixing_data = self.past_close_data.get(rate_index.get_name())
+                let past_fixing_data = self.past_close_data.get(&rate_index.get_id())
                     .ok_or_else(|| anyhow::anyhow!(
                         "({}:{}) failed to get past fixing data of {}.\nself.past_close_data does not have {}",
-                        file!(), line!(), instrument.get_symbol_str(), rate_index.get_rate_index_symbol_str(),
+                        file!(), line!(), instrument.get_code_str(), rate_index.get_rate_index_code_str(),
                     ))?.clone();
                 Some(past_fixing_data)
             }
@@ -407,7 +395,7 @@ impl PricerFactory {
                             "({}:{}) failed to get FX of {}.\nself.fxs does not have {:?}",
                             file!(),
                             line!(),
-                            instrument.get_code(),
+                            instrument.get_id(),
                             fx_code,
                         )
                     })?
@@ -434,11 +422,10 @@ impl PricerFactory {
             .get(&instrument.get_id())
             .ok_or_else(|| {
                 anyhow::anyhow!(
-                    "({}:{}) failed to get equity of {}.\nself.equities does not have {}",
+                    "({}:{}) failed to get equity of {}",
                     file!(),
                     line!(),
-                    instrument.get_code(),
-                    instrument.get_code(),
+                    instrument.get_id(),
                 )
             })?
             .clone();

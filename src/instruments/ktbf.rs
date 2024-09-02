@@ -75,7 +75,7 @@ impl KTBF {
                     "({}:{}) The pricing date of the underlying bond {} ({}) is not set",
                     file!(), line!(),
                     bond.get_name(),
-                    bond.get_code(),
+                    bond.get_id(),
                 );
                 return Err(err());
             }
@@ -86,7 +86,7 @@ impl KTBF {
                     is not the same as the ktbf maturity",
                     file!(), line!(),
                     bond.get_name(),
-                    bond.get_code(),
+                    bond.get_id(),
                     inst_info.id,
                 );
                 return Err(err());

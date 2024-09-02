@@ -498,7 +498,7 @@ mod tests {
             None,
             Currency::KRW,
             "KOSPI2".to_string(),
-            "KOSPI2".to_string(),
+            static_id::StaticId::from_str("KOSPI2", "KRX"),
         )));
         let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_date.clone())));
 

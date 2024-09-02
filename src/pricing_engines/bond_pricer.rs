@@ -383,7 +383,7 @@ mod tests {
             //
             Some(0.00),
             Some(0.0),
-            Some(rate_index),
+            Some(cd),
             None, //Some(String::from("1D")),
             //
             calendar,

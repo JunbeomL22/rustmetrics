@@ -23,7 +23,7 @@ pub trait PricerTrait {
     fn fx_exposure(&self, instrument: &Instrument, npv: Real) -> Result<HashMap<Currency, Real>> {
         let mut map = HashMap::new();
         map.insert(
-            *instrument.get_currency(),
+            instrument.get_currency(),
             npv * instrument.get_unit_notional(),
         );
         Ok(map)
