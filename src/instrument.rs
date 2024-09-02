@@ -40,7 +40,7 @@ use time::OffsetDateTime;
 pub trait InstrumentTrait {
     // The following methods are mandatory for all instruments
     fn get_inst_info(&self) -> &InstInfo;
-    fn get_id(&self) -> ID { self.get_inst_info().id }
+    fn get_id(&self) -> StaticId { self.get_inst_info().id }
     fn get_name(&self) -> &String { self.get_inst_info().get_name() }
     fn get_symbol_str(&self) -> &str { self.get_inst_info().symbol_str() }
     fn get_currency(&self) -> Currency { self.get_inst_info().currency }
@@ -55,13 +55,13 @@ pub trait InstrumentTrait {
     fn get_issue_date(&self) -> Option<&OffsetDateTime> { self.get_inst_info().get_issue_date() }
     // There is an instrument that does not have underlying names,
     // so the default action is to return an empty vector
-    fn get_underlying_ids(&self) -> Vec<ID> { vec![] }
+    fn get_underlying_ids(&self) -> Vec<StaticId> { vec![] }
 
-    fn get_quanto_fxcode_und_pair(&self) -> Vec<(ID, &FxCode)> { vec![] }
+    fn get_quanto_fxcode_und_pair(&self) -> Vec<(StaticId, &FxCode)> { vec![] }
 
     fn get_all_fxcodes_for_pricing(&self) -> Vec<FxCode> { vec![] }
 
-    fn get_underlying_ids_requiring_volatility(&self) -> Vec<ID> { vec![] }
+    fn get_underlying_ids_requiring_volatility(&self) -> Vec<StaticId> { vec![] }
     /// only for bonds, so None must be allowed
     fn get_credit_rating(&self) -> Result<CreditRating> {
         let err = || anyhow!(
@@ -90,7 +90,7 @@ pub trait InstrumentTrait {
         Err(lazy_err())
     }
     // only for bonds, so None must be allowed
-    fn get_issuer_id(&self) -> Result<ID> {
+    fn get_issuer_id(&self) -> Result<StaticId> {
         let err = || anyhow!(
             "({}:{}) not supported instrument type on get_issuer_name",
             file!(),
@@ -109,7 +109,7 @@ pub trait InstrumentTrait {
         Err(err())
     }
 
-    fn get_bond_futures_borrowing_curve_ids(&self) -> Vec<ID> {
+    fn get_bond_futures_borrowing_curve_ids(&self) -> Vec<StaticId> {
         vec![]
     }
 
@@ -283,8 +283,8 @@ impl Instruments {
         res
     }
 
-    pub fn get_all_underlying_ids(&self) -> Vec<ID> {
-        let mut underlying_ids = Vec::<ID>::new();
+    pub fn get_all_underlying_ids(&self) -> Vec<StaticId> {
+        let mut underlying_ids = Vec::<StaticId>::new();
         for instrument in self.instruments.iter() {
             let ids = instrument.get_underlying_ids();
             for id in ids.iter() {
@@ -309,7 +309,7 @@ impl Instruments {
         fxcodes
     }
 
-    pub fn get_all_quanto_fxcode_und_pairs(&self) -> HashSet<(ID, &FxCode)> {
+    pub fn get_all_quanto_fxcode_und_pairs(&self) -> HashSet<(StaticId, &FxCode)> {
         let mut fxcodes = HashSet::new();
         for instrument in self.instruments.iter() {
             let codes = instrument.get_quanto_fxcode_und_pair();
@@ -376,7 +376,7 @@ impl Instruments {
 
     pub fn instruments_with_underlying(
         &self,
-        und_id: ID,
+        und_id: StaticId,
         exclude_type: Option<Vec<&str>>,
     ) -> Vec<Rc<Instrument>> {
         let exclude_type = exclude_type.unwrap_or_default();
@@ -414,7 +414,7 @@ impl Instruments {
 
     pub fn instruments_using_curve(
         &self,
-        curve_id: ID,
+        curve_id: StaticId,
         match_parameter: &MatchParameter,
         exclude_type: Option<Vec<&str>>,
     ) -> Result<Vec<Rc<Instrument>>> {
@@ -459,9 +459,9 @@ impl Instruments {
     pub fn get_all_curve_ids<'a>(
         &'a self,
         match_parameter: &'a MatchParameter,
-    ) -> Result<Vec<ID>> {
+    ) -> Result<Vec<StaticId>> {
         let mut res = Vec::<ID>::new();
-        let dummy_id = ID::default();
+        let dummy_id = StaticId::default();
         for instrument in self.instruments.iter() {
             let discount_curve_id = match_parameter.get_discount_curve_id(instrument)?;
             if !res.contains(&discount_curve_id) && discount_curve_id != dummy_id {
@@ -473,7 +473,7 @@ impl Instruments {
                     res.push(*id);
                 }
             }
-            let rate_index_curve_name = match_parameter.get_rate_index_curve_name(instrument)?;
+            let rate_index_curve_id = match_parameter.get_rate_index_curve_id(instrument)?;
             if !res.contains(&rate_index_curve_name) && rate_index_curve_name != &dummy {
                 res.push(rate_index_curve_name);
             }

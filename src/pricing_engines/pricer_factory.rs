@@ -13,8 +13,8 @@ use crate::pricing_engines::{
     option_analytic_pricer::OptionAnalyticPricer, plain_swap_pricer::PlainSwapPricer,
     pricer::Pricer, unit_pricer::UnitPricer,
 };
-use crate::ID;
 //
+use static_id::StaticId;
 use std::{cell::RefCell, rc::Rc};
 use rustc_hash::FxHashMap;
 
@@ -25,11 +25,11 @@ use anyhow::{anyhow, Result};
 pub struct PricerFactory {
     evaluation_date: Rc<RefCell<EvaluationDate>>,
     fxs: FxHashMap<FxCode, Rc<RefCell<MarketPrice>>>,
-    equities: FxHashMap<ID, Rc<RefCell<MarketPrice>>>,
-    zero_curves: FxHashMap<ID, Rc<RefCell<ZeroCurve>>>,
-    underlying_volatilities: FxHashMap<ID, Rc<RefCell<Volatility>>>,
-    quantos: FxHashMap<(ID, FxCode), Rc<RefCell<Quanto>>>, // (underlying_code, fx_code) -> Quanto
-    past_close_data: FxHashMap<ID, Rc<DailyClosePrice>>,
+    equities: FxHashMap<StaticId, Rc<RefCell<MarketPrice>>>,
+    zero_curves: FxHashMap<StaticId, Rc<RefCell<ZeroCurve>>>,
+    underlying_volatilities: FxHashMap<StaticId, Rc<RefCell<Volatility>>>,
+    quantos: FxHashMap<(StaticId, FxCode), Rc<RefCell<Quanto>>>, // (underlying_code, fx_code) -> Quanto
+    past_close_data: FxHashMap<StaticId, Rc<DailyClosePrice>>,
     match_parameter: Rc<MatchParameter>,
     calculation_configuration: Rc<CalculationConfiguration>,
 }
@@ -39,11 +39,11 @@ impl PricerFactory {
     pub fn new(
         evaluation_date: Rc<RefCell<EvaluationDate>>,
         fxs: FxHashMap<FxCode, Rc<RefCell<MarketPrice>>>,
-        equities: FxHashMap<ID, Rc<RefCell<MarketPrice>>>,
-        zero_curves: FxHashMap<ID, Rc<RefCell<ZeroCurve>>>,
-        underlying_volatilities: FxHashMap<ID, Rc<RefCell<Volatility>>>,
-        quantos: FxHashMap<(ID, FxCode), Rc<RefCell<Quanto>>>,
-        past_close_data: FxHashMap<ID, Rc<DailyClosePrice>>,
+        equities: FxHashMap<StaticId, Rc<RefCell<MarketPrice>>>,
+        zero_curves: FxHashMap<StaticId, Rc<RefCell<ZeroCurve>>>,
+        underlying_volatilities: FxHashMap<StaticId, Rc<RefCell<Volatility>>>,
+        quantos: FxHashMap<(StaticId, FxCode), Rc<RefCell<Quanto>>>,
+        past_close_data: FxHashMap<StaticId, Rc<DailyClosePrice>>,
         match_parameter: Rc<MatchParameter>,
         calculation_configuration: Rc<CalculationConfiguration>,
     ) -> PricerFactory {
@@ -89,7 +89,7 @@ impl PricerFactory {
         let discount_curve_id = self.match_parameter.get_discount_curve_id(instrument)?;
         let discount_curve = self
             .zero_curves
-            .get(discount_curve_id)
+            .get(&discount_curve_id)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "{}:{} (PricerFactory::get_bond_pricer)\n\
@@ -316,7 +316,7 @@ impl PricerFactory {
 
         let fx = self
             .fxs
-            .get(fx_code)
+            .get(&fx_code)
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "({}:{}) failed to get FX of {}.\nself.fxs does not have {:?}",
@@ -431,7 +431,7 @@ impl PricerFactory {
     fn get_stock_pricer(&self, instrument: &Rc<Instrument>) -> Result<Pricer> {
         let equity = self
             .equities
-            .get(instrument.get_id())
+            .get(&instrument.get_id())
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "({}:{}) failed to get equity of {}.\nself.equities does not have {}",

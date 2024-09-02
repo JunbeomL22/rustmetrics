@@ -1,0 +1,9 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml",
+        //"./examples/tutorial/Cargo.toml",
+        //"./examples/bond/Cargo.toml"
+    ],
+    "rust-analyzer.completion.autoimport.enable": false,
+    "rust-analyzer.showUnlinkedFileNotification": false,
+}

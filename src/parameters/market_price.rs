@@ -7,7 +7,11 @@ use std::cell::RefCell;
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 use std::rc::Rc;
 use time::OffsetDateTime;
-use tracing::debug;
+use static_id::StaticId;
+use flashlog::{
+    debug,
+    lazy_string::LazyString,
+};
 
 /// an observer of evaluation_date
 /// when ever calculating theta the MarketPrice price mut be deducted by the dividend
@@ -18,7 +22,7 @@ pub struct MarketPrice {
     dividend: Option<Rc<RefCell<DiscreteRatioDividend>>>,
     currency: Currency,
     name: String,
-    code: String,
+    id: StaticId,
 }
 
 impl MarketPrice {
@@ -36,7 +40,7 @@ impl MarketPrice {
         dividend: Option<Rc<RefCell<DiscreteRatioDividend>>>,
         currency: Currency,
         name: String,
-        code: String,
+        id: StaticId,
     ) -> MarketPrice {
         MarketPrice {
             value,
@@ -44,7 +48,7 @@ impl MarketPrice {
             dividend,
             currency,
             name,
-            code,
+            id,
         }
     }
 

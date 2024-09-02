@@ -1,16 +1,14 @@
 [package]
-name = "examples-guide"
+name = "examples-tutorial"
 version = "0.1.0"
 edition = "2021"
-#license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 korean-lunar-calendar = { version = "1.0.0"}
 time = { version = "0.3", features = ["macros"]}
-quantlib = { version = "0.1", path = "../../quantlib" }
-trading-engine = { version = "0.1", path = "../../trading-engine" }
+rustmetrics = { version = "0.1", path = "../" }
 env_logger = { version = "0.11"}
 criterion = { version = "0.5"}
 plotters = "0.3.5"

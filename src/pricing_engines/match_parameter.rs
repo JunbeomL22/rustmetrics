@@ -7,46 +7,46 @@ use crate::enums::{
 };
 use crate::instrument::{Instrument, InstrumentTrait};
 use crate::instruments::plain_swap::PlainSwapType;
-use crate::ID;
 //
+use static_id::StaticId;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
 //
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MatchParameter {
-    // Underlying asset code: ID -> curve_id: ID
+    // Underlying asset code: StaticId -> curve_id: StaticId
     // Underlying code examples are stock, bond, commodity, etc.
-    collateral_curve_map: FxHashMap<ID, ID>,
-    // Underlying asset code: ID -> curve_id: ID
+    collateral_curve_map: FxHashMap<StaticId, StaticId>,
+    // Underlying asset code: StaticId -> curve_id: StaticId
     // Underlying code examples are stock, bond, commodity, etc.
-    borrowing_curve_map: FxHashMap<ID, ID>,
-    // (issuer: ID,
+    borrowing_curve_map: FxHashMap<StaticId, StaticId>,
+    // (issuer: StaticId,
     //  issuer_type: IssuerType,
     //  credit_rating: CreditRating,
-    //  currency: Currency) -> ID
-    bond_discount_curve_map: FxHashMap<(ID, IssuerType, CreditRating, Currency), ID>,
-    // index code: RateIndexCode -> ID
-    rate_index_forward_curve_map: FxHashMap<ID, ID>,
-    // Currency::XXX -> ID::from("XXXCRS")
-    // But if XXX == USD, then it is ID::from("USDOIS")
-    crs_curve_map: FxHashMap<Currency, ID>,
+    //  currency: Currency) -> StaticId
+    bond_discount_curve_map: FxHashMap<(StaticId, IssuerType, CreditRating, Currency), StaticId>,
+    // index code: RateIndexCode -> StaticId
+    rate_index_forward_curve_map: FxHashMap<StaticId, StaticId>,
+    // Currency::XXX -> StaticId::from_str("XXXCRS", "KAP")
+    // But if XXX == USD, then it is StaticId::from_str("USDOIS", "KAP")
+    crs_curve_map: FxHashMap<Currency, StaticId>,
     //
-    funding_cost_map: FxHashMap<Currency, ID>,
+    funding_cost_map: FxHashMap<Currency, StaticId>,
     //
 }
 
 impl Default for MatchParameter {
     fn default() -> MatchParameter {
-        let collateral_curve_map: FxHashMap<ID, ID> = FxHashMap::default();
+        let collateral_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
 
-        let borrowing_curve_map: FxHashMap<ID, ID> = FxHashMap::default();
+        let borrowing_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
 
-        let bond_discount_curve_map: FxHashMap<(ID, IssuerType, CreditRating, Currency), ID> = FxHashMap::default();
+        let bond_discount_curve_map: FxHashMap<(StaticId, IssuerType, CreditRating, Currency), StaticId> = FxHashMap::default();
 
-        let crs_curve_map: FxHashMap<Currency, ID> = FxHashMap::default();
-        let funding_cost_map: FxHashMap<Currency, ID> = FxHashMap::default();
-        let rate_index_forward_curve_map: FxHashMap<ID, ID> = FxHashMap::default();
+        let crs_curve_map: FxHashMap<Currency, StaticId> = FxHashMap::default();
+        let funding_cost_map: FxHashMap<Currency, StaticId> = FxHashMap::default();
+        let rate_index_forward_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
         
         MatchParameter {
             collateral_curve_map,
@@ -61,12 +61,12 @@ impl Default for MatchParameter {
 
 impl MatchParameter {
     pub fn new(
-        collateral_curve_map: FxHashMap<ID, ID>,
-        borrowing_curve_map: FxHashMap<ID, ID>,
-        bond_discount_curve_map: FxHashMap<(ID, IssuerType, CreditRating, Currency), ID>,
-        crs_curve_map: FxHashMap<Currency, ID>,
-        rate_index_forward_curve_map: FxHashMap<ID, ID>,
-        funding_cost_map: FxHashMap<Currency, ID>,
+        collateral_curve_map: FxHashMap<StaticId, StaticId>,
+        borrowing_curve_map: FxHashMap<StaticId, StaticId>,
+        bond_discount_curve_map: FxHashMap<(StaticId, IssuerType, CreditRating, Currency), StaticId>,
+        crs_curve_map: FxHashMap<Currency, StaticId>,
+        rate_index_forward_curve_map: FxHashMap<StaticId, StaticId>,
+        funding_cost_map: FxHashMap<Currency, StaticId>,
     ) -> MatchParameter {
         MatchParameter {
             collateral_curve_map,
@@ -80,11 +80,11 @@ impl MatchParameter {
 
     /// In the cases of crs, fx products, etc, this means the base_curve
     /// For example, if the undrlying fx is usdkrw, then crs_curve is krwcrs
-    pub fn get_crs_curve_id(&self, instrument: &Instrument) -> Result<ID> {
+    pub fn get_crs_curve_id(&self, instrument: &Instrument) -> Result<StaticId> {
         match instrument {
             Instrument::PlainSwap(instrument) => {
                 if instrument.get_specific_plain_swap_type()? == PlainSwapType::IRS {
-                    return Ok(ID::default());
+                    return Ok(StaticId::default());
                 }
 
                 let fixed_currency = instrument.get_fixed_leg_currency()?;
@@ -108,15 +108,15 @@ impl MatchParameter {
                     ))?;
                 Ok(*res)
             }
-            _ => Ok(ID::default()),
+            _ => Ok(StaticId::default()),
         }
     }
 
-    pub fn get_floating_crs_curve_id(&self, instrument: &Instrument) -> Result<ID> {
+    pub fn get_floating_crs_curve_id(&self, instrument: &Instrument) -> Result<StaticId> {
         match instrument {
             Instrument::PlainSwap(instrument) => {
                 if instrument.get_specific_plain_swap_type()? == PlainSwapType::IRS {
-                    return Ok(ID::default());
+                    return Ok(StaticId::default());
                 }
 
                 let floating_currency = instrument.get_floating_leg_currency()?;
@@ -140,10 +140,10 @@ impl MatchParameter {
                     ))?;
                 Ok(*res)
             }
-            _ => Ok(ID::default()),
+            _ => Ok(StaticId::default()),
         }
     }
-    pub fn get_discount_curve_id(&self, instrument: &Instrument) -> Result<ID> {
+    pub fn get_discount_curve_id(&self, instrument: &Instrument) -> Result<StaticId> {
         let id = instrument.get_id();
         let base_msg = format!("discount curve not found for ({:?})", id);
         match instrument {
@@ -158,7 +158,7 @@ impl MatchParameter {
                     instrument.get_currency(),
                 )) {
                     Some(curve_id) => Ok(*curve_id),
-                    None => Ok(ID::default()),
+                    None => Ok(StaticId::default()),
                 }
             }
             // IRS (or OIS) uses rate index forward curve as discount curve
@@ -169,7 +169,7 @@ impl MatchParameter {
                     .unwrap();
 
                 match rate_index {
-                    None => Ok(ID::default()),
+                    None => Ok(StaticId::default()),
                     Some(rate_index) => {
                         match self.rate_index_forward_curve_map.get(&rate_index.get_id()) {
                             Some(curve_id) => Ok(*curve_id),
@@ -183,7 +183,7 @@ impl MatchParameter {
             }
             Instrument::VanillaOption(instrument) => {
                 match instrument.get_option_daily_settlement_type()? {
-                    OptionDailySettlementType::Settled => Ok(ID::default()),
+                    OptionDailySettlementType::Settled => Ok(StaticId::default()),
                     OptionDailySettlementType::NotSettled => {
                         match self.funding_cost_map.get(&instrument.get_currency()) {
                             Some(curve_id) => Ok(*curve_id),
@@ -204,12 +204,12 @@ impl MatchParameter {
             | Instrument::KTBF(_)
             | Instrument::FxFutures(_)
             | Instrument::Stock(_)
-            | Instrument::Cash(_) => Ok(ID::default()),
+            | Instrument::Cash(_) => Ok(StaticId::default()),
         }
     }
     /// Curve name for underlying asset
     /// This retrives the curve name from self.collateral_curve_map
-    pub fn get_collateral_curve_ids(&self, instrument: &Instrument) -> Result<Vec<ID>> {
+    pub fn get_collateral_curve_ids(&self, instrument: &Instrument) -> Result<Vec<StaticId>> {
         let und_ids = instrument.get_underlying_ids();
         let mut res = vec![];
         for id in und_ids {
@@ -231,8 +231,8 @@ impl MatchParameter {
     pub fn get_collateral_curve_id(
         &self,
         instrument: &Instrument,
-        und_id: ID,
-    ) -> Result<ID> {
+        und_id: StaticId,
+    ) -> Result<StaticId> {
         if let Some(id) = self.collateral_curve_map.get(&und_id) {
             return Ok(*id);
         } else {
@@ -246,7 +246,7 @@ impl MatchParameter {
     }
     /// Curve name for underlying asset
     /// This retrives the curve name from self.collateral_curve_map
-    pub fn get_borrowing_curve_ids(&self, instrument: &Instrument) -> Result<Vec<ID>> {
+    pub fn get_borrowing_curve_ids(&self, instrument: &Instrument) -> Result<Vec<StaticId>> {
         let mut und_ids = instrument.get_underlying_ids();
         let bond_futures_collateral_ids = instrument.get_bond_futures_borrowing_curve_ids();
         if !bond_futures_collateral_ids.is_empty() {
@@ -271,12 +271,12 @@ impl MatchParameter {
         Ok(res)
     }
 
-    pub fn get_rate_index_curve_id(&self, instrument: &Instrument) -> Result<ID> {
+    pub fn get_rate_index_curve_id(&self, instrument: &Instrument) -> Result<StaticId> {
         match instrument {
             Instrument::Bond(instrument) => {
                 let rate_index = instrument.get_rate_index()?;
                 match rate_index {
-                    None => Ok(ID::default()),
+                    None => Ok(StaticId::default()),
                     Some(rate_index) => {
                         let res = self.rate_index_forward_curve_map.get(&rate_index.get_id())
                         .ok_or_else(|| anyhow!(
@@ -290,7 +290,7 @@ impl MatchParameter {
             Instrument::PlainSwap(instrument) => {
                 let rate_index = instrument.get_rate_index()?;
                 match rate_index {
-                    None => Ok(ID::default()),
+                    None => Ok(StaticId::default()),
                     Some(rate_index) => {
                         let res = self.rate_index_forward_curve_map.get(&rate_index.get_id())
                         .ok_or_else(|| anyhow!(
@@ -301,15 +301,15 @@ impl MatchParameter {
                     }
                 }
             },
-            _ => Ok(ID::default()),
+            _ => Ok(StaticId::default()),
         }
     }
 
-    pub fn get_collateral_curve_map(&self) -> &FxHashMap<ID, ID> {
+    pub fn get_collateral_curve_map(&self) -> &FxHashMap<StaticId, StaticId> {
         &self.collateral_curve_map
     }
 
-    pub fn get_borrowing_curve_map(&self) -> &FxHashMap<ID, ID> {
+    pub fn get_borrowing_curve_map(&self) -> &FxHashMap<StaticId, StaticId> {
         &self.borrowing_curve_map
     }
 }
@@ -327,24 +327,18 @@ mod tests {
     use crate::time::conventions::{BusinessDayConvention, DayCountConvention, PaymentFrequency};
     use crate::time::jointcalendar::JointCalendar;
     use crate::InstType;
-    use crate::Ticker;
     use anyhow::Result;
-    use std::collections::HashMap;
     use time::macros::datetime;
 
     #[test]
     fn test_match_parameter() -> Result<()> {
-        let mut collateral_curve_map: FxHashMap<ID, ID> = FxHashMap::default();
-        let borrowing_curve_map: FxHashMap<ID, ID> = FxHashMap::default();
-        let bond_discount_curve_map: FxHashMap<(ID, IssuerType, CreditRating, Currency), ID> = FxHashMap::default();
-        let mut rate_index_forward_curve_map: FxHashMap<ID, ID> = FxHashMap::default();
+        let mut collateral_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
+        let borrowing_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
+        let bond_discount_curve_map: FxHashMap<(StaticId, IssuerType, CreditRating, Currency), StaticId> = FxHashMap::default();
+        let mut rate_index_forward_curve_map: FxHashMap<StaticId, StaticId> = FxHashMap::default();
 
-        let stockid = ID::new(
-            crate::Symbol::Ticker(Ticker::from("AAPL")),
-            crate::Venue::KIS,
-        );
-
-        let inst_id = ID::new(crate::Symbol::Ticker(Ticker::from("APPL_Fut")), crate::Venue::KoreaInvSec);
+        let stock_id = StaticId::from_str("AAPL", "KIS");
+        let inst_id = StaticId::from_str("APPL_Fut", "KoreaInvSec");
 
         let maturity_date = datetime!(2021-12-31 00:00:00 +00:00);
 
@@ -364,7 +358,7 @@ mod tests {
             100.0,
             Some(maturity_date.clone()),
             Currency::USD,
-            stockid,
+            stock_id,
         );
 
         // let's make SouthKorea - Setlement calendar
@@ -374,7 +368,7 @@ mod tests {
         let calendar = Calendar::SouthKorea(sk);
         let joint_calendar = JointCalendar::new(vec![calendar])?;
 
-        let index_id = ID::new(crate::Symbol::Ticker(Ticker::from("CD 91D")), crate::Venue::KAP);
+        let index_id = StaticId::from_str("CD 91D", "KAP");
         let index_tenor = crate::Tenor::new_from_string("3M")?;
         // make a CD 3M RateIndex
         let cd = RateIndex::new(
@@ -384,10 +378,7 @@ mod tests {
             "CD 91D".to_string(),
         )?;
 
-        let swap_id = ID::new(
-            crate::Symbol::Ticker(Ticker::from("KRWIRS")),
-            crate::Venue::KRX,
-        );
+        let swap_id = StaticId::from_str("KRWIRS", "KRX");
 
         let issue_date = datetime!(2021-01-01 00:00:00 +00:00);
         let maturity_date = datetime!(2021-12-31 00:00:00 +00:00);
@@ -431,20 +422,13 @@ mod tests {
             joint_calendar.clone(),
         )?;
 
-        let usdgov_curve_id = ID::new(
-            crate::Symbol::Ticker(Ticker::from("USDGOV")),
-            crate::Venue::KAP,
-        );
+        let usdgov_curve_id = StaticId::from_str("USDGOV", "KAP");
+        let krwirs_curve_id = StaticId::from_str("KRWIRS", "KAP");
 
-        let krwirs_curve_id = ID::new(
-            crate::Symbol::Ticker(Ticker::from("KRWIRS")),
-            crate::Venue::KAP,
-        );
-
-        collateral_curve_map.insert(stockid, usdgov_curve_id);
+        collateral_curve_map.insert(stock_id, usdgov_curve_id);
         rate_index_forward_curve_map.insert(index_id, krwirs_curve_id);
 
-        let funding_cost_map: FxHashMap<Currency, ID> = FxHashMap::default();
+        let funding_cost_map: FxHashMap<Currency, StaticId> = FxHashMap::default();
 
         let match_parameter = MatchParameter::new(
             collateral_curve_map,
@@ -459,15 +443,15 @@ mod tests {
         let irs_inst = Instrument::PlainSwap(irs);
 
         assert_eq!(
-            match_parameter.get_collateral_curve_id(&stock_futures_inst, stockid)?,
+            match_parameter.get_collateral_curve_id(&stock_futures_inst, stock_id)?,
             usdgov_curve_id,
             "EquityFutures has underlying code AAPL but it returns a curve name: {}",
-            match_parameter.get_collateral_curve_id(&stock_futures_inst, stockid)?
+            match_parameter.get_collateral_curve_id(&stock_futures_inst, stock_id)?
         );
 
         assert_eq!(
             match_parameter.get_discount_curve_id(&stock_futures_inst)?,
-            ID::default(),
+            StaticId::default(),
             "EquityFutures does not need to be discounted but it returns a curve name: {}",
             match_parameter.get_discount_curve_id(&stock_futures_inst)?
         );
@@ -475,7 +459,7 @@ mod tests {
         assert_eq!(
             match_parameter
                 .get_rate_index_curve_id(&stock_futures_inst)?,
-            ID::default(),
+            StaticId::default(),
             "EquityFutures does not need to be discounted but it returns a curve name: {}",
             match_parameter.get_rate_index_curve_id(&stock_futures_inst)?
         );
