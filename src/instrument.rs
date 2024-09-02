@@ -684,16 +684,16 @@ impl Instruments {
     ) -> Vec<StaticId> {
         match instruments {
             Some(instruments) => {
-                let mut res = Vec::<String>::new();
+                let mut res = Vec::<StaticId>::new();
                 for instrument in instruments.iter() {
-                    res.push(instrument.get_code_str());
+                    res.push(instrument.get_id());
                 }
                 res
             }
             None => {
-                let mut res = Vec::<String>::new();
+                let mut res = Vec::<StaticId>::new();
                 for instrument in self.instruments.iter() {
-                    res.push(instrument.get_code_str().clone());
+                    res.push(instrument.get_id());
                 }
                 res
             }
@@ -909,7 +909,7 @@ mod tests {
                 StaticId::from_str("KOSPI2", "KRX"),
                 None);
 
-        assert_eq!(fut1.get_code(), instruments_with_kospi2[0].get_code());
+        assert_eq!(fut1.get_code_str(), instruments_with_kospi2[0].get_code_str());
         assert_eq!(fut1.get_name(), instruments_with_kospi2[0].get_name());
         assert_eq!(
             fut1.get_currency(),
@@ -931,7 +931,7 @@ mod tests {
         let instruments_using_krw_gov =
             instruments.instruments_using_curve(StaticId::from_str("KRWGOV", "KAP"), &match_parameter, None)?;
 
-        assert_eq!(fut1.get_code(), instruments_using_krw_gov[0].get_code());
+        assert_eq!(fut1.get_code_str(), instruments_using_krw_gov[0].get_code_str());
 
         // test discount curve
         let instruments_using_krw_irs =
@@ -940,26 +940,26 @@ mod tests {
                 &match_parameter, 
                 None)?;
 
-        assert_eq!(irs.get_code(), instruments_using_krw_irs[0].get_code());
+        assert_eq!(irs.get_code_str(), instruments_using_krw_irs[0].get_code_str());
 
         // test instruments_with_currency
         let instruments_with_krw = instruments.instruments_with_currency(Currency::KRW);
-        assert_eq!(fut1.get_code(), instruments_with_krw[0].get_code());
-        assert_eq!(irs.get_code(), instruments_with_krw[1].get_code());
+        assert_eq!(fut1.get_code_str(), instruments_with_krw[0].get_code_str());
+        assert_eq!(irs.get_code_str(), instruments_with_krw[1].get_code_str());
 
         // test instruments_with_type
         let instruments_with_equity_futures = instruments.instruments_with_types(vec!["Futures"]);
         assert_eq!(
-            fut1.get_code(),
-            instruments_with_equity_futures[0].get_code()
+            fut1.get_code_str(),
+            instruments_with_equity_futures[0].get_code_str()
         );
         assert_eq!(
-            fut2.get_code(),
-            instruments_with_equity_futures[1].get_code()
+            fut2.get_code_str(),
+            instruments_with_equity_futures[1].get_code_str()
         );
 
         let instruments_with_irs = instruments.instruments_with_types(vec!["IRS"]);
-        assert_eq!(irs.get_code(), instruments_with_irs[0].get_code());
+        assert_eq!(irs.get_code_str(), instruments_with_irs[0].get_code_str());
 
         // test instruments_with_maturity_upto
         let instruments_with_maturity_upto = instruments.instruments_with_maturity_upto(
@@ -968,10 +968,10 @@ mod tests {
             None,
         );
         assert_eq!(
-            fut1.get_code(),
-            instruments_with_maturity_upto[0].get_code()
+            fut1.get_code_str(),
+            instruments_with_maturity_upto[0].get_code_str()
         );
-        assert_eq!(irs.get_code(), instruments_with_maturity_upto[1].get_code());
+        assert_eq!(irs.get_code_str(), instruments_with_maturity_upto[1].get_code_str());
 
         Ok(())
     }
