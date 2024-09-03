@@ -114,6 +114,10 @@ mod tests {
     use crate::parameters::zero_curve::ZeroCurve;
     use crate::pricing_engines::fx_futures_pricer::FxFuturesPricer;
     use crate::pricing_engines::pricer::PricerTrait;
+    use crate::{
+        InstInfo,
+        InstType,
+    };
     use anyhow::Result;
     use ndarray::array;
     use std::cell::RefCell;
@@ -158,14 +162,14 @@ mod tests {
             Some(eval_date),
             Currency::KRW,
             "KRWCRS".to_string(),
-            "KRWCRS".to_string(),
+            StaticId::from_str("KRWCRS", "KAP"),
         )?;
 
         let krwcrs_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &futures_curve_data,
             "KRWCRS".to_string(),
-            "KRWCRS".to_string(),
+            StaticId::from_str("KRWCRS", "KAP"),
         )?));
 
         let pricer = FxFuturesPricer::new(
@@ -179,19 +183,22 @@ mod tests {
         let last_trade_date = datetime!(2024-12-15 00:00:00 UTC);
 
         let inst_id = StaticId::from_str("USDKRW Futures", "KRX");
-
+        let inst_info = InstInfo {
+            id: inst_id,
+            inst_type: InstType::FxFutures,
+            name: "USDKRW Futures".to_string(),
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(last_trade_date.clone()),
+            currency: Currency::KRW,
+            unit_notional: 10_000.0,
+            accounting_level: crate::AccountingLevel::L1,
+        };
 
         let fxfutures = FxFutures::new(
+            inst_info,
             1_300.0,
-            issue_date.clone(),
-            last_trade_date.clone(),
-            last_trade_date.clone(),
-            last_trade_date.clone(),
-            10_000.0,
-            Currency::KRW,
+            None,
             Currency::USD,
-            "USDKRW Futures".to_string(),
-            "USDKRW Futures".to_string(),
         );
 
         let inst = Instrument::FxFutures(fxfutures);

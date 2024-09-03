@@ -136,7 +136,7 @@ impl PricerTrait for PlainSwapPricer {
         Ok(res)
     }
 
-    fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<HashMap<Currency, Real>> {
+    fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<FxHashMap<Currency, Real>> {
         let mut fixed_res = 0.0;
         let mut floating_res = 0.0;
         let mut discount_factor: Real;
@@ -295,14 +295,14 @@ pub mod tests {
             None, //issue_date.clone(),
             Currency::USD,
             "USDIRS".to_string(),
-            "USDIRS".to_string(),
+            StaticId::from_str("USDIRS", "KAP"),
         )?;
 
         let usdirs_curve = ZeroCurve::new(
             evaluation_date.clone(),
             &usdirs_data,
             "USDIRS".to_string(),
-            "USD IR Curve".to_string(),
+            StaticId::from_str("USD IR Curve", "KAP"),
         )?;
 
         let floating_curve = Rc::new(RefCell::new(usdirs_curve));
@@ -314,14 +314,14 @@ pub mod tests {
             None,
             Currency::KRW,
             "KRWCRS".to_string(),
-            "KRWCRS".to_string(),
+            StaticId::from_str("KRWCRS", "KAP"),
         )?;
 
         let krwcrs_curve = ZeroCurve::new(
             evaluation_date.clone(),
             &krwcrs_data,
             "KRWCRS".to_string(),
-            "KRW CRS Curve".to_string(),
+            StaticId::from_str("KRW CRS Curve", "KAP"),
         )?;
 
         let fixed_curve = Rc::new(RefCell::new(krwcrs_curve));
@@ -475,14 +475,14 @@ pub mod tests {
             None,
             Currency::KRW,
             "KRWIRS".to_string(),
-            "KRWIRS".to_string(),
+            StaticId::from_str("KRWIRS", "KAP"),
         )?;
 
         let curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &curve_data,
             "KRWIRS".to_string(),
-            "KRWIRS".to_string(),
+            StaticId::from_str("KRWIRS", "KAP"),
         )?));
 
         let pricer = PlainSwapPricer::new(

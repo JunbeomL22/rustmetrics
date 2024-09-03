@@ -4,7 +4,7 @@ use crate::definitions::{
 };
 use crate::evaluation_date::EvaluationDate;
 use crate::instrument::{Instrument, InstrumentTrait, Instruments};
-use crate::instruments::inst_info::InstrumentInfo;
+
 use crate::parameters::volatilities::local_volatility_surface::LocalVolatilitySurface;
 use crate::parameters::{
     discrete_ratio_dividend::DiscreteRatioDividend, market_price::MarketPrice,
@@ -12,7 +12,6 @@ use crate::parameters::{
     volatilities::constant_volatility::ConstantVolatility, volatility::Volatility,
     zero_curve::ZeroCurve,
 };
-use tracing::{info, warn, Level};
 
 use crate::data::{
     daily_value_data::DailyValueData, surface_data::SurfaceData, value_data::ValueData,
@@ -28,17 +27,21 @@ use crate::pricing_engines::{
 };
 use crate::time::{calendar_trait::CalendarTrait, calendars::nullcalendar::NullCalendar};
 use crate::util::format_duration;
-use crate::utils::string_arithmetic::add_period;
-
+//
 use anyhow::{anyhow, bail, Context, Result};
 use ndarray::Array2;
 use std::sync::Arc;
 use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
+    cell::RefCell,    
     rc::Rc,
 };
+use rustc_hash::{
+    FxHashMap,
+    FxHashSet,
+};
 use time::{Duration, OffsetDateTime};
+use static_id::StaticId;
+use flashlog;
 
 /// Engine typically handles a bunch of instruments and calculate the pricing of the instruments.
 /// Therefore, the result of calculations is a hashmap with the key being the code of the instrument
@@ -47,20 +50,20 @@ pub struct Engine {
     engine_id: usize,
     msg_tag: String,
     //
-    calculation_results: HashMap<String, RefCell<CalculationResult>>,
+    calculation_results: FxHashMap<StaticId, RefCell<CalculationResult>>,
     calculation_configuration: Rc<CalculationConfiguration>, // this should be cloned
     //
     evaluation_date: Rc<RefCell<EvaluationDate>>,
-    fxs: HashMap<FxCode, Rc<RefCell<MarketPrice>>>,
-    equities: HashMap<String, Rc<RefCell<MarketPrice>>>,
-    zero_curves: HashMap<String, Rc<RefCell<ZeroCurve>>>,
-    dividends: HashMap<String, Option<Rc<RefCell<DiscreteRatioDividend>>>>,
-    volatilities: HashMap<String, Rc<RefCell<Volatility>>>,
-    quantos: HashMap<(String, FxCode), Rc<RefCell<Quanto>>>,
-    past_daily_close_prices: HashMap<String, Rc<DailyClosePrice>>,
+    fxs: FxHashMap<FxCode, Rc<RefCell<MarketPrice>>>,
+    equities: FxHashMap<StaticId, Rc<RefCell<MarketPrice>>>,
+    zero_curves: FxHashMap<StaticId, Rc<RefCell<ZeroCurve>>>,
+    dividends: FxHashMap<StaticId, Option<Rc<RefCell<DiscreteRatioDividend>>>>,
+    volatilities: FxHashMap<StaticId, Rc<RefCell<Volatility>>>,
+    quantos: FxHashMap<(StaticId, FxCode), Rc<RefCell<Quanto>>>,
+    past_daily_close_prices: FxHashMap<StaticId, Rc<DailyClosePrice>>,
     // instruments
     instruments: Instruments,         // all instruments
-    pricers: HashMap<String, Pricer>, // pricers for each instrument
+    pricers: FxHashMap<StaticId, Pricer>, // pricers for each instrument
     // selected instuments for calculation,
     // e.g., if we calcualte a delta of a single stock, we do not need calculate all instruments
     instruments_in_action: Vec<Rc<Instrument>>,
@@ -77,19 +80,19 @@ impl Engine {
         Engine {
             engine_id,
             msg_tag: "".to_string(),
-            calculation_results: HashMap::new(),
+            calculation_results: FxHashMap::default(),
             calculation_configuration: Rc::new(calculation_configuration),
             evaluation_date: Rc::new(RefCell::new(EvaluationDate::new(evaluation_offsetdatetime))),
-            fxs: HashMap::new(),
-            equities: HashMap::new(),
-            zero_curves: HashMap::new(),
-            dividends: HashMap::new(),
-            volatilities: HashMap::new(),
-            quantos: HashMap::new(),
-            past_daily_close_prices: HashMap::new(),
+            fxs: FxHashMap::default(),
+            equities: FxHashMap::default(),
+            zero_curves: FxHashMap::default(),
+            dividends: FxHashMap::default(),
+            volatilities: FxHashMap::default(),
+            quantos: FxHashMap::default(),
+            past_daily_close_prices: FxHashMap::default(),
             instruments: Instruments::default(),
             instruments_in_action: vec![],
-            pricers: HashMap::new(),
+            pricers: FxHashMap::default(),
             match_parameter: Rc::new(match_parameter),
         }
     }
@@ -97,18 +100,18 @@ impl Engine {
     #[allow(clippy::too_many_arguments)]
     pub fn with_parameter_data(
         mut self,
-        fx_data: Arc<HashMap<FxCode, ValueData>>,
-        stock_data: Arc<HashMap<String, ValueData>>,
-        curve_data: Arc<HashMap<String, VectorData>>,
-        dividend_data: Arc<HashMap<String, VectorData>>,
-        equity_constant_volatility_data: Arc<HashMap<String, ValueData>>,
-        equity_volatility_surface_data: Arc<HashMap<String, SurfaceData>>,
-        fx_constant_volatility_data: Arc<HashMap<FxCode, ValueData>>,
-        quanto_correlation_data: Arc<HashMap<(String, FxCode), ValueData>>,
-        past_daily_value_data: Arc<HashMap<String, DailyValueData>>,
+        fx_data: Arc<FxHashMap<FxCode, ValueData>>,
+        stock_data: Arc<FxHashMap<StaticId, ValueData>>,
+        curve_data: Arc<FxHashMap<StaticId, VectorData>>,
+        dividend_data: Arc<FxHashMap<StaticId, VectorData>>,
+        equity_constant_volatility_data: Arc<FxHashMap<StaticId, ValueData>>,
+        equity_volatility_surface_data: Arc<FxHashMap<StaticId, SurfaceData>>,
+        fx_constant_volatility_data: Arc<FxHashMap<FxCode, ValueData>>,
+        quanto_correlation_data: Arc<FxHashMap<(StaticId, FxCode), ValueData>>,
+        past_daily_value_data: Arc<FxHashMap<StaticId, DailyValueData>>,
     ) -> Result<Engine> {
         let fx_codes = self.instruments.get_all_fxcodes_for_pricing();
-        let mut fxs: HashMap<FxCode, Rc<RefCell<MarketPrice>>> = HashMap::new();
+        let mut fxs: FxHashMap<FxCode, Rc<RefCell<MarketPrice>>> = FxHashMap::default();
         for fx_code in fx_codes {
             if fx_data.contains_key(&fx_code) {
                 let data = fx_data.get(&fx_code).unwrap();
@@ -116,9 +119,9 @@ impl Engine {
                     data.get_value(),
                     self.evaluation_date.borrow().get_date_clone(),
                     None,
-                    *fx_code.get_currency2(),
+                    fx_code.get_currency2(),
                     fx_code.to_string(),
-                    fx_code.to_string(),
+                    fx_code.to_static_id(),
                 )));
                 fxs.insert(fx_code, rc);
             } else if fx_data.contains_key(&fx_code.reciprocal()) {
@@ -127,28 +130,28 @@ impl Engine {
                     1.0 / data.get_value(),
                     self.evaluation_date.borrow().get_date_clone(),
                     None,
-                    *fx_code.get_currency2(),
+                    fx_code.get_currency2(),
                     fx_code.to_string(),
-                    fx_code.to_string(),
+                    fx_code.to_static_id(),
                 )));
                 fxs.insert(fx_code, rc);
-            } else if fx_data.contains_key(&FxCode::new(*fx_code.get_currency1(), Currency::KRW))
-                && fx_data.contains_key(&FxCode::new(*fx_code.get_currency2(), Currency::KRW))
+            } else if fx_data.contains_key(&FxCode::new(fx_code.get_currency1(), Currency::KRW))
+                && fx_data.contains_key(&FxCode::new(fx_code.get_currency2(), Currency::KRW))
             {
                 let data1 = fx_data
-                    .get(&FxCode::new(*fx_code.get_currency1(), Currency::KRW))
+                    .get(&FxCode::new(fx_code.get_currency1(), Currency::KRW))
                     .unwrap();
                 let data2 = fx_data
-                    .get(&FxCode::new(*fx_code.get_currency2(), Currency::KRW))
+                    .get(&FxCode::new(fx_code.get_currency2(), Currency::KRW))
                     .unwrap();
 
                 let rc = Rc::new(RefCell::new(MarketPrice::new(
                     data1.get_value() / data2.get_value(),
                     self.evaluation_date.borrow().get_date_clone(),
                     None,
-                    *fx_code.get_currency2(),
+                    fx_code.get_currency2(),
                     fx_code.to_string(),
-                    fx_code.to_string(),
+                    fx_code.to_static_id(),
                 )));
                 fxs.insert(fx_code, rc);
             } else {
@@ -163,26 +166,23 @@ impl Engine {
             }
         }
         // curve data
-        let mut zero_curves = HashMap::new();
-        let all_curve_names = self
-            .instruments
-            .get_all_curve_names(&self.match_parameter)?;
-        for curve_name in all_curve_names {
-            if curve_data.contains_key(curve_name) {
-                let data = curve_data.get(curve_name).unwrap();
+        let mut zero_curves = FxHashMap::default();
+        let all_curve_ids = self.instruments.get_all_curve_ids(&self.match_parameter)?;
+        for curve_id in all_curve_ids {
+            if let Some(data) = curve_data.get(&curve_id) {
                 let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
                     self.evaluation_date.clone(),
                     data,
-                    curve_name.clone(),
-                    curve_name.clone(),
+                    data.name.clone(),
+                    curve_id,
                 )?));
-                zero_curves.insert(curve_name.clone(), zero_curve.clone());
+                zero_curves.insert(curve_id.clone(), zero_curve.clone());
             } else {
                 bail!(
                     "({}:{}) failed to get curve data for {}",
                     file!(),
                     line!(),
-                    curve_name
+                    curve_id
                 );
             }
         }
@@ -191,20 +191,20 @@ impl Engine {
             "missing dividend data list (engine-id: {})\n",
             self.engine_id
         );
-        let mut dividends = HashMap::new();
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
+        let mut dividends = FxHashMap::default();
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
         let mut no_dividends = vec![];
-        for underlying_code in all_underlying_codes {
-            if dividend_data.contains_key(underlying_code) {
-                let data = dividend_data.get(underlying_code).unwrap();
+        for underlying_id in all_underlying_ids {
+            //if dividend_data.contains_key(&underlying_id) {
+            if let Some(data) = dividend_data.get(&underlying_id) {
                 let spot = stock_data
-                    .get(underlying_code)
+                    .get(&underlying_id)
                     .with_context(|| {
                         anyhow!(
                             "({}:{}) failed to get stock data for {}",
                             file!(),
                             line!(),
-                            underlying_code
+                            underlying_id
                         )
                     })?
                     .get_value();
@@ -213,21 +213,21 @@ impl Engine {
                         self.evaluation_date.clone(),
                         data,
                         spot,
-                        underlying_code.clone(),
-                        underlying_code.clone(),
+                        data.name,
+                        underlying_id.clone(),
                     )
                     .with_context(|| {
                         anyhow!(
                             "({}:{}) failed to create discrete ratio dividend for {}",
                             file!(),
                             line!(),
-                            underlying_code
+                            underlying_id
                         )
                     })?,
                 )));
-                dividends.insert(underlying_code.clone(), dividend.clone());
+                dividends.insert(underlying_id.clone(), dividend.clone());
             } else {
-                no_dividends.push(underlying_code.clone());
+                no_dividends.push(underlying_id.clone());
             }
         }
         if !no_dividends.is_empty() {
@@ -235,19 +235,19 @@ impl Engine {
                 "no dividend data for: {}\n",
                 no_dividends.join(" | ")
             ));
-            info!("{}", no_dividend_data_msg);
+            flashlog::log_info!("NoData", message = no_dividend_data_msg);
         }
         //
         // borrowing curve parameter
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
-        for und_code in all_underlying_codes {
-            if curve_data.contains_key(und_code) {
-                let data = curve_data.get(und_code).unwrap();
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
+        for und_code in all_underlying_ids {
+            //if curve_data.contains_key(und_code) {
+            if let Some(data) = curve_data.get(&und_code) {
                 let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
                     self.evaluation_date.clone(),
                     data,
-                    und_code.clone(),
-                    und_code.clone(),
+                    data.name,
+                    und_code,
                 )?));
                 zero_curves.insert(und_code.clone(), zero_curve.clone());
             } else {
@@ -261,12 +261,13 @@ impl Engine {
         }
         //
         // equity parameters
-        let mut equities = HashMap::new();
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
-        for underlying_code in all_underlying_codes {
-            if stock_data.contains_key(underlying_code) {
-                let data = stock_data.get(underlying_code).unwrap();
-                let div = match dividends.get(underlying_code) {
+        let mut equities = FxHashMap::default();
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
+        for underlying_id in all_underlying_ids {
+            //if stock_data.contains_key(underlying_id) {
+            if let Some(data) = stock_data.get(&underlying_id) {
+                //let data = stock_data.get(underlying_id).unwrap();
+                let div = match dividends.get(&underlying_id) {
                     Some(div) => div.clone(),
                     None => None,
                 };
@@ -276,27 +277,26 @@ impl Engine {
                     div,
                     *data.get_currency(),
                     data.get_name().clone(),
-                    underlying_code.clone(),
+                    underlying_id.clone(),
                 )));
-                equities.insert(underlying_code.clone(), rc);
+                equities.insert(underlying_id.clone(), rc);
             } else {
                 bail!(
                     "({}:{}) failed to get stock data for {}",
                     file!(),
                     line!(),
-                    underlying_code
+                    underlying_id
                 );
             }
         }
         //
         // equity volatility parameter
-        let mut volatilities = HashMap::new();
-        let all_underlying_codes = self
-            .instruments
-            .get_all_unerlying_codes_requiring_volatility(None);
-        for und_code in all_underlying_codes {
-            if equity_constant_volatility_data.contains_key(&und_code) {
-                let data = equity_constant_volatility_data.get(&und_code).unwrap();
+        let mut volatilities = FxHashMap::default();
+        let all_underlying_ids = self.instruments.get_all_unerlying_ids_requiring_volatility(None);
+        for und_code in all_underlying_ids {
+            //if equity_constant_volatility_data.contains_key(&und_code) {
+            if let Some(data) = equity_constant_volatility_data.get(&und_code) {
+                //let data = equity_constant_volatility_data.get(&und_code).unwrap();
                 let vega_matrix_spot_moneyness = self
                     .calculation_configuration
                     .get_vega_matrix_spot_moneyness();
@@ -332,7 +332,7 @@ impl Engine {
                         "({}:{}) failed to get borrowing curve for {} in creating volatility surface\n\
                         zero curves list:\n {:?}",
                         file!(), line!(), und_code,
-                        zero_curves.keys().map(|s| s.as_str()).collect::<Vec<&str>>().join(" | "),
+                        zero_curves.keys().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "),
                     ))?.clone();
                 let stickyness = self.calculation_configuration.get_stickyness_type();
                 let lv_interpolator = self.calculation_configuration.get_lv_interpolator();
@@ -343,7 +343,7 @@ impl Engine {
                     borrowing_curve,
                     stickyness,
                     lv_interpolator,
-                    und_code.clone(),
+                    data.get_name(),
                     und_code.clone(),
                 )
                 .with_constant_volatility(
@@ -425,12 +425,12 @@ impl Engine {
         //
         // fx volatility parameter
         let quanto_fx_und_pair = self.instruments.get_all_quanto_fxcode_und_pairs();
-        let unique_fxcodes: HashSet<FxCode> = quanto_fx_und_pair
+        let unique_fxcodes: FxHashSet<FxCode> = quanto_fx_und_pair
             .iter()
             .map(|(_, second)| **second)
             .collect();
 
-        let mut fx_volatilities = HashMap::new();
+        let mut fx_volatilities = FxHashMap::default();
         for fx_code in unique_fxcodes {
             if fx_constant_volatility_data.contains_key(&fx_code) {
                 let data = fx_constant_volatility_data.get(&fx_code).unwrap();
@@ -453,7 +453,7 @@ impl Engine {
         }
         //
         // quanto parameter
-        let mut quantos = HashMap::new();
+        let mut quantos = FxHashMap::default();
         for (und_code, fxcode) in quanto_fx_und_pair {
             if quanto_correlation_data.contains_key(&(und_code.clone(), *fxcode)) {
                 let data = quanto_correlation_data
@@ -481,7 +481,7 @@ impl Engine {
             }
         }
         // past price parameter
-        let mut past_daily_close_prices = HashMap::new();
+        let mut past_daily_close_prices = FxHashMap::default();
         for (key, data) in past_daily_value_data.iter() {
             let daily_close = DailyClosePrice::new_from_data(data).with_context(|| {
                 anyhow!(
@@ -548,7 +548,7 @@ impl Engine {
             .collect();
         let all_und_codes: Vec<&str> = self
             .instruments
-            .get_all_underlying_codes()
+            .get_all_underlying_ids()
             .iter()
             .map(|c| c.as_str())
             .collect();
@@ -570,7 +570,7 @@ impl Engine {
             .instruments_with_maturity_upto(None, &dt, None);
 
         if !insts_over_maturity.is_empty() {
-            let mut inst_codes = Vec::<String>::new();
+            let mut inst_codes = Vec::<StaticId>::new();
             let mut inst_mat = Vec::<Option<OffsetDateTime>>::new();
             for inst in insts_over_maturity {
                 inst_codes.push(inst.get_code().clone());
@@ -588,7 +588,7 @@ impl Engine {
                     Some(m) => format!("{}: {:}", code, m),
                     None => format!("{}: None", code),
                 })
-                .collect::<Vec<String>>()
+                .collect::<Vec<StaticId>>()
                 .join("\n");
             bail!(
                 "(Engine::initialize_instruments) There are instruments with maturity within the evaluation date\n\
@@ -603,7 +603,7 @@ impl Engine {
                 .instruments_with_maturity_upto(None, &(dt + Duration::hours(6)), None);
 
         if !insts_with_very_short_maturity.is_empty() {
-            let mut inst_codes = Vec::<String>::new();
+            let mut inst_codes = Vec::<StaticId>::new();
             let mut inst_mat = Vec::<Option<OffsetDateTime>>::new();
             for inst in insts_with_very_short_maturity {
                 inst_codes.push(inst.get_code().clone());
@@ -621,7 +621,7 @@ impl Engine {
                     Some(m) => format!("{}: {:}", code, m),
                     None => format!("{}: None", code),
                 })
-                .collect::<Vec<String>>()
+                .collect::<Vec<StaticId>>()
                 .join("\n");
 
             println!(
@@ -693,8 +693,8 @@ impl Engine {
         self.instruments_in_action = self.instruments.get_instruments_clone();
     }
 
-    pub fn get_npvs(&self) -> Result<HashMap<String, Real>> {
-        let mut npvs = HashMap::new();
+    pub fn get_npvs(&self) -> Result<FxHashMap<StaticId, Real>> {
+        let mut npvs = FxHashMap::default();
         for inst in &self.instruments_in_action {
             let inst_code = inst.get_code();
             let pricer = self.pricers.get(inst_code).with_context(|| {
@@ -722,8 +722,8 @@ impl Engine {
         Ok(npvs)
     }
 
-    pub fn get_npv_results(&self) -> Result<HashMap<String, NpvResult>> {
-        let mut npvs = HashMap::new();
+    pub fn get_npv_results(&self) -> Result<FxHashMap<StaticId, NpvResult>> {
+        let mut npvs = FxHashMap::default();
         for inst in &self.instruments_in_action {
             let inst_code = inst.get_code();
             let pricer = self.pricers.get(inst_code).with_context(|| {
@@ -772,7 +772,7 @@ impl Engine {
     }
 
     pub fn set_fx_exposures(&mut self) -> Result<()> {
-        let mut fx_exposures = HashMap::new();
+        let mut fx_exposures = FxHashMap::default();
         for inst in &self.instruments_in_action {
             let inst_code = inst.get_code();
             let pricer = self.pricers.get(inst_code).ok_or_else(|| {
@@ -883,11 +883,11 @@ impl Engine {
     pub fn set_delta_gamma(&mut self) -> Result<()> {
         self.reset_instruments_in_action();
 
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
         let delta_bump_ratio = self.calculation_configuration.get_delta_bump_ratio();
 
-        let mut delta_up_map: HashMap<String, Real>;
-        let mut delta_down_map: HashMap<String, Real>;
+        let mut delta_up_map: FxHashMap<StaticId, Real>;
+        let mut delta_down_map: FxHashMap<StaticId, Real>;
 
         let mut delta_up: Real;
         let mut delta_down: Real;
@@ -900,7 +900,7 @@ impl Engine {
         let down_bump = 1.0 - delta_bump_ratio;
         let exclude_type = vec!["Stock", "Futures"];
         let exclude_type_clone = exclude_type.clone();
-        for und_code in all_underlying_codes.iter() {
+        for und_code in all_underlying_ids.iter() {
             self.instruments_in_action = self
                 .instruments
                 .instruments_with_underlying(und_code, Some(exclude_type_clone.clone()));
@@ -1006,7 +1006,7 @@ impl Engine {
     }
 
     pub fn set_rho(&mut self) -> Result<()> {
-        let mut npvs_up: HashMap<String, Real>;
+        let mut npvs_up: FxHashMap<StaticId, Real>;
         let all_curve_names = self
             .instruments
             .get_all_curve_names(&self.match_parameter)?;
@@ -1091,13 +1091,13 @@ impl Engine {
     }
 
     pub fn set_vega(&mut self) -> Result<()> {
-        let mut npvs_up: HashMap<String, Real>;
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
+        let mut npvs_up: FxHashMap<StaticId, Real>;
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
         let bump_val = self.calculation_configuration.get_vega_bump_value();
         let mut npv: Real;
         let exclude_type = vec!["Futures", "Stock"];
         let exclude_type_clone = exclude_type.clone();
-        for vol_code in all_underlying_codes {
+        for vol_code in all_underlying_ids {
             self.instruments_in_action = self
                 .instruments
                 .instruments_with_underlying(vol_code, Some(exclude_type_clone.clone()));
@@ -1122,7 +1122,7 @@ impl Engine {
                 .bump_volatility(None, None, None, None, bump_val)?;
             }
 
-            npvs_up = self.get_npvs().context("failed to get npvs")?; // instrument code (String) -> npv (Real
+            npvs_up = self.get_npvs().context("failed to get npvs")?; // instrument code (StaticId) -> npv (Real
 
             for inst in &self.instruments_in_action {
                 let inst_code = inst.get_code();
@@ -1195,7 +1195,7 @@ impl Engine {
     // ... for i = 0, 1, ..., N-2 and
     // vega_structure[N-1] = vega_structure_up[N-1] - npv
     pub fn set_vega_structure(&mut self) -> Result<()> {
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
         let eval_dt = self.evaluation_date.borrow().get_date_clone();
         let bump_val = self
             .calculation_configuration
@@ -1209,16 +1209,16 @@ impl Engine {
             .map(|dt| time_calculator.get_time_difference(&eval_dt, &dt))
             .collect::<Vec<Time>>();
 
-        // instrument code (String) -> npv (Real)
-        let mut current_npvs_up: HashMap<String, Real>;
+        // instrument code (StaticId) -> npv (Real)
+        let mut current_npvs_up: FxHashMap<StaticId, Real>;
         let mut npv: Real;
         let mut npv_up: Real;
-        // inst code (String) -> Vec<Real>
-        let mut single_vega_structure: HashMap<String, Vec<Real>>;
+        // inst code (StaticId) -> Vec<Real>
+        let mut single_vega_structure: FxHashMap<StaticId, Vec<Real>>;
         let exclude_type = vec!["Cash", "Stock", "Futures"];
         let exclude_type_clone = exclude_type.clone();
 
-        for und_code in all_underlying_codes {
+        for und_code in all_underlying_ids {
             self.instruments_in_action = self
                 .instruments
                 .instruments_with_underlying(und_code, Some(exclude_type_clone.clone()));
@@ -1243,7 +1243,7 @@ impl Engine {
                 .into_iter()
                 .zip(init_vec.into_iter())
                 .collect();
-            let mut prev_npvs_up: HashMap<String, Real> = HashMap::new();
+            let mut prev_npvs_up: FxHashMap<StaticId, Real> = FxHashMap::default();
             for inst_code in inst_codes_in_action.iter() {
                 prev_npvs_up.insert(
                     inst_code.clone(),
@@ -1349,7 +1349,7 @@ impl Engine {
     }
 
     pub fn set_vega_matrix(&mut self) -> Result<()> {
-        let all_underlying_codes = self.instruments.get_all_underlying_codes();
+        let all_underlying_ids = self.instruments.get_all_underlying_ids();
         let eval_dt = self.evaluation_date.borrow().get_date_clone();
         let bump_val = self
             .calculation_configuration
@@ -1368,16 +1368,16 @@ impl Engine {
             .get_vega_matrix_spot_moneyness()
             .to_vec();
 
-        // instrument code (String) -> npv (Real)
-        let mut current_npvs_up: HashMap<String, Real>;
+        // instrument code (StaticId) -> npv (Real)
+        let mut current_npvs_up: FxHashMap<StaticId, Real>;
         let mut npv: Real;
         let mut npv_up: Real;
-        // inst code (String) -> Array2<Real>
-        let mut single_vega_matrix: HashMap<String, Array2<Real>> = HashMap::new();
+        // inst code (StaticId) -> Array2<Real>
+        let mut single_vega_matrix: FxHashMap<StaticId, Array2<Real>> = FxHashMap::default();
         let exclude_type = vec!["Cash", "Stock", "Futures"];
         let exclude_type_clone = exclude_type.clone();
 
-        for und_code in all_underlying_codes {
+        for und_code in all_underlying_ids {
             self.instruments_in_action = self
                 .instruments
                 .instruments_with_underlying(und_code, Some(exclude_type_clone.clone()));
@@ -1394,14 +1394,14 @@ impl Engine {
             }
             let inst_codes_in_action = self
                 .instruments
-                .get_all_inst_code_clone(Some(&self.instruments_in_action));
+                .get_all_inst_id(Some(&self.instruments_in_action));
 
             for inst_code in inst_codes_in_action.iter() {
                 let init = Array2::zeros((calc_times.len(), spot_moneyness.len()));
                 single_vega_matrix.insert(inst_code.clone(), init);
             }
 
-            let mut prev_npvs_up: HashMap<String, Real> = HashMap::new();
+            let mut prev_npvs_up: FxHashMap<StaticId, Real> = FxHashMap::default();
 
             for inst_code in inst_codes_in_action.iter() {
                 prev_npvs_up.insert(
@@ -1444,7 +1444,7 @@ impl Engine {
 
                     let bump_moneyness_end = Some(spot_moneyness[j]);
                     {
-                        (*self.volatilities.get(und_code).ok_or_else(|| {
+                        (*self.volatilities.get(&und_code).ok_or_else(|| {
                             anyhow!(
                                 "({}:{}) volatility {} is not set\ntag:\n{}",
                                 file!(),
@@ -1472,22 +1472,22 @@ impl Engine {
                         )
                     })?;
 
-                    //let code = String::from("165XXX3");
+                    //let code = StaticId::from("165XXX3");
                     //println!("i: {}, j: {} current_npvs_up: {:?}", i, j, current_npvs_up.get(&code).unwrap());
 
                     for inst in self.instruments_in_action.iter() {
-                        let inst_code = inst.get_code();
+                        let inst_code = inst.get_id();
                         let unitamt = inst.get_unit_notional();
                         npv_up = *current_npvs_up
-                            .get(inst_code)
+                            .get(&inst_code)
                             .ok_or_else(|| anyhow!("npv_up is not set for {}", inst_code))?;
                         npv = *prev_npvs_up
-                            .get(inst_code)
+                            .get(&inst_code)
                             .ok_or_else(|| anyhow!("npv is not set for {}", inst_code))?;
 
                         let vega_matrix = (npv_up - npv) / bump_val * VEGA_PNL_UNIT * unitamt;
                         single_vega_matrix
-                            .get_mut(inst_code)
+                            .get_mut(&inst_code)
                             .ok_or_else(|| anyhow!("vega_matrix is not set for {}", inst_code))?
                             [[i, j]] = vega_matrix;
                     }
@@ -1508,7 +1508,7 @@ impl Engine {
             }
             // put back
             {
-                (*self.volatilities.get(und_code).ok_or_else(|| {
+                (*self.volatilities.get(&und_code).ok_or_else(|| {
                     anyhow!(
                         "({}:{}) volatility {} is not set\ntag:\n{}",
                         file!(),
@@ -1526,8 +1526,8 @@ impl Engine {
     }
 
     pub fn set_div_delta(&mut self) -> Result<()> {
-        let mut npvs_up: HashMap<String, Real>;
-        let all_dividend_codes = self.instruments.get_all_underlying_codes();
+        let mut npvs_up: FxHashMap<StaticId, Real>;
+        let all_dividend_codes = self.instruments.get_all_underlying_ids();
         let bump_val = self.calculation_configuration.get_div_bump_value();
         let mut npv: Real;
         let exclude_type = vec!["Stock", "Cash"];
@@ -1552,18 +1552,18 @@ impl Engine {
                     .bump_date_interval(None, None, bump_val)?;
             }
 
-            npvs_up = self.get_npvs().context("failed to get npvs")?; // instrument code (String) -> npv (Real
+            npvs_up = self.get_npvs().context("failed to get npvs")?; // instrument code (StaticId) -> npv (Real
 
             for inst in &self.instruments_in_action {
-                let inst_code = inst.get_code();
+                let inst_id = inst.get_id();
                 let unitamt = inst.get_unit_notional();
                 let npv_up = npvs_up
-                    .get(inst_code)
+                    .get(&inst_id)
                     .ok_or_else(|| anyhow!("npv_up is not set"))?;
 
                 npv = self
                     .calculation_results
-                    .get(inst.get_code())
+                    .get(&inst.get_id())
                     .ok_or_else(|| anyhow!("result is not set"))?
                     .borrow()
                     .get_npv_result()
@@ -1573,15 +1573,15 @@ impl Engine {
                 let div_delta = (npv_up - npv) / bump_val * DIV_PNL_UNIT * unitamt;
                 (*self
                     .calculation_results
-                    .get(inst.get_code())
-                    .ok_or_else(|| anyhow!("result is not set for {}", inst.get_code()))?)
+                    .get(&inst.get_id())
+                    .ok_or_else(|| anyhow!("result is not set for {}", inst.get_code_str()))?)
                 .borrow_mut()
                 .set_single_div_delta(div_code, div_delta);
             }
             // put back the bump
             {
                 self.dividends
-                    .get(div_code)
+                    .get(&div_code)
                     .unwrap()
                     .clone()
                     .unwrap()
@@ -1595,13 +1595,13 @@ impl Engine {
     pub fn preprocess_theta(&mut self, inst_type: Vec<&str>) -> Result<()> {
         let insts = self.instruments.instruments_with_types(inst_type);
         for inst in insts {
-            let inst_code = inst.get_code();
-            (*self.calculation_results.get(inst_code).ok_or_else(|| {
+            let inst_id = inst.get_id();
+            (*self.calculation_results.get(&inst_id).ok_or_else(|| {
                 anyhow!(
                     "({}:{}) result is not set for {} ({})",
                     file!(),
                     line!(),
-                    inst_code,
+                    inst_id,
                     inst.get_type_name(),
                 )
             })?)
@@ -1643,7 +1643,7 @@ impl Engine {
 
         let continue_type = ["Stock", "Cash"];
         for inst in self.instruments_in_action.iter() {
-            let inst_code = inst.get_code();
+            let inst_code = inst.get_code_str();
             let inst_type = inst.get_type_name();
             if continue_type.contains(&inst_type) {
                 continue;
@@ -1704,7 +1704,7 @@ impl Engine {
     pub fn set_rho_structure(&mut self) -> Result<()> {
         let all_curve_codes = self
             .instruments
-            .get_all_curve_names(&self.match_parameter)?;
+            .get_all_curve_ids(&self.match_parameter)?;
         let eval_dt = self.evaluation_date.borrow().get_date_clone();
         let bump_val = self.calculation_configuration.get_rho_bump_value();
         let calc_tenors = self.calculation_configuration.get_rho_structure_tenors();
@@ -1719,12 +1719,12 @@ impl Engine {
             calc_times.push(time_calculator.get_time_difference(&eval_dt, date));
         }
 
-        // instrument code (String) -> npv (Real)
-        let mut npvs_up: HashMap<String, Real>;
+        // instrument code (StaticId) -> npv (Real)
+        let mut npvs_up: FxHashMap<StaticId, Real>;
         let mut npv_up: Real;
         let mut npv: Real;
-        // inst code (String) -> Vec<Real>
-        let mut single_rho_structure: HashMap<String, Vec<Real>>;
+        // inst code (StaticId) -> Vec<Real>
+        let mut single_rho_structure: FxHashMap<StaticId, Vec<Real>>;
         let mut val: Real;
         let exclude_type = vec!["Stock", "Cash"];
         let exclude_type_clone = exclude_type.clone();
@@ -1742,7 +1742,7 @@ impl Engine {
 
             let inst_codes_in_action = self
                 .instruments
-                .get_all_inst_code_clone(Some(&self.instruments_in_action));
+                .get_all_inst_id(Some(&self.instruments_in_action));
             let init_vec: Vec<Vec<Real>> =
                 vec![vec![0.0; tenor_length]; inst_codes_in_action.len()];
             single_rho_structure = inst_codes_in_action
@@ -1758,7 +1758,7 @@ impl Engine {
                 let bump_end = Some(calc_times[i]);
                 // bump the curve with the limit of the scope of mutable borrow
                 {
-                    (*self.zero_curves.get(curve_code).with_context(|| {
+                    (*self.zero_curves.get(&curve_code).with_context(|| {
                         anyhow!(
                             "({}:{}) no zero curve: {}\n{}",
                             file!(),
@@ -1774,14 +1774,14 @@ impl Engine {
                 //
                 npvs_up = self.get_npvs().context("failed to get npvs")?;
                 for inst in &self.instruments_in_action {
-                    let inst_code = inst.get_code();
+                    let inst_code = inst.get_id();
                     let unitamt = inst.get_unit_notional();
                     npv_up = *npvs_up
-                        .get(inst_code)
+                        .get(&inst_code)
                         .context("failed to get npv_up in rho-structure calculation")?;
                     npv = self
                         .calculation_results
-                        .get(inst_code)
+                        .get(&inst_code)
                         .context("failed to get npv in rho-structure calculation")?
                         .borrow()
                         .get_npv_result()
@@ -1790,12 +1790,12 @@ impl Engine {
 
                     val = (npv_up - npv) / bump_val * RHO_PNL_UNIT * unitamt;
                     single_rho_structure
-                        .get_mut(inst_code)
+                        .get_mut(&inst_code)
                         .context("failed to get single_rho_structure")?[i] = val;
                 }
                 // put back
                 {
-                    (*self.zero_curves.get(curve_code).with_context(|| {
+                    (*self.zero_curves.get(&curve_code).with_context(|| {
                         anyhow!(
                             "({}:{}) no zero curve: {}\n{}",
                             file!(),
@@ -1837,8 +1837,8 @@ impl Engine {
     }
 
     pub fn set_div_structure(&mut self) -> Result<()> {
-        //let all_dividend_codes = self.instruments.get_all_underlying_codes();
-        let all_dividend_codes = self.dividends.keys().collect::<Vec<&String>>();
+        //let all_dividend_codes = self.instruments.get_all_underlying_ids();
+        let all_dividend_codes = self.dividends.keys().collect::<Vec<&StaticId>>();
         let bump_val = self.calculation_configuration.get_div_bump_value();
         let calc_tenors = self.calculation_configuration.get_div_structure_tenors();
         let tenor_length = calc_tenors.len();
@@ -1852,12 +1852,12 @@ impl Engine {
             })
             .collect::<Vec<_>>();
 
-        // instrument code (String) -> npv (Real)
-        let mut npvs_up: HashMap<String, Real>;
+        // instrument code (StaticId) -> npv (Real)
+        let mut npvs_up: FxHashMap<StaticId, Real>;
         let mut npv_up: Real;
         let mut npv: Real;
-        // inst code (String) -> Vec<Real>
-        let mut single_div_structure: HashMap<String, Vec<Real>>;
+        // inst code (StaticId) -> Vec<Real>
+        let mut single_div_structure: FxHashMap<StaticId, Vec<Real>>;
         let mut val: Real;
         let exclude_type = vec!["Stock", "Cash"];
         let exclude_type_clone = exclude_type.clone();
@@ -1866,7 +1866,7 @@ impl Engine {
             // reset instruments
             self.instruments_in_action = self
                 .instruments
-                .instruments_with_underlying(div_code, Some(exclude_type_clone.clone()));
+                .instruments_with_underlying(*div_code, Some(exclude_type_clone.clone()));
 
             if self.instruments_in_action.is_empty() {
                 continue;
@@ -1874,7 +1874,7 @@ impl Engine {
             // initialize the single_div_structure. insert the inst code and zero vector
             let inst_codes_in_action = self
                 .instruments
-                .get_all_inst_code_clone(Some(&self.instruments_in_action));
+                .get_all_inst_id(Some(&self.instruments_in_action));
 
             let init_vec: Vec<Vec<Real>> =
                 vec![vec![0.0; tenor_length]; inst_codes_in_action.len()];
@@ -1903,23 +1903,18 @@ impl Engine {
                 //
                 npvs_up = self.get_npvs()?;
                 for inst in &self.instruments_in_action {
-                    let inst_code = inst.get_code();
+                    let inst_code = inst.get_id();
                     let unitamt = inst.get_unit_notional();
-                    npv_up = *npvs_up
-                        .get(inst_code)
-                        .context("failed to get npv_up in div-structure calculation")?;
-                    npv = self
-                        .calculation_results
-                        .get(inst_code)
-                        .context("failed to get npv in div-structure calculation")?
+                    npv_up = *npvs_up.get(&inst_code).context("failed to get npv_up in div-structure calculation")?;
+                    npv = self.calculation_results
+                        .get(&inst_code).context("failed to get npv in div-structure calculation")?
                         .borrow()
-                        .get_npv_result()
-                        .context("failed to get npv_result in div-structure calculation")?
+                        .get_npv_result().context("failed to get npv_result in div-structure calculation")?
                         .get_npv();
 
                     val = (npv_up - npv) / bump_val * DIV_PNL_UNIT * unitamt;
                     single_div_structure
-                        .get_mut(inst_code)
+                        .get_mut(&inst_code)
                         .context("failed to get single_div_structure")?[i] = val;
                 }
 
@@ -1949,24 +1944,27 @@ impl Engine {
                     .get(inst_code)
                     .context("failed to get result")?
                     .borrow_mut()
-                    .set_single_div_structure(div_code, div_structure.clone());
+                    .set_single_div_structure(*div_code, div_structure.clone());
             }
         }
         Ok(())
     }
 
     pub fn calculate(&mut self) -> Result<()> {
-        // enter new span
-        let span = tracing::span!(Level::INFO, "calculate", engine_id = self.engine_id.clone());
-        let _enter = span.enter();
-
-        let mut timer = std::time::Instant::now();
-        let start_time = std::time::Instant::now();
+        let mut timer = flashlog::get_unix_nano();
+        let start_time = flashlog::get_unix_nano();
 
         if !self.instruments_in_action.is_empty() {
-            warn!(
-                "* no instruments to calculate in engine-{}\n",
-                self.engine_id
+            let id = self.engine_id;
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* instruments to calculate in engine-{}\n",
+                    id
+                )
+            });
+            flashlog::log_warn!(
+                "NoInst",
+                message = msg,
             );
         }
 
@@ -1975,39 +1973,59 @@ impl Engine {
             self.set_values()?;
             self.set_cashflow_inbetween()?;
 
-            info!(
-                "* npv calculation is done (engine id: {}, time = {} whole time elapsed: {})",
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64()),
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* npv calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!(
+                "Timer",
+                message = msg,
             );
         }
 
         if self.calculation_configuration.get_fx_exposure_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_fx_exposures()?;
-            info!(
-                "* fx exposure calculation is done (engine id: {}, time = {} whole time elapsed: {})", 
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64()),
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* fx exposure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!(
+                "Timer",
+                message = msg,  
             );
         }
 
         if self.calculation_configuration.get_delta_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.preprocess_delta_gamma()?;
             self.set_delta_gamma()?;
-            info!(
-                "* delta calculation is done (engine id: {}, time = {} whole time elapsed: {})",
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64()),
-            );
+
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* delta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!("Timer", message = msg);
         }
 
         if self.calculation_configuration.get_theta_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             let exclude_type = vec!["Cash", "Stock"];
             let exclude_type_clone = exclude_type.clone();
             self.preprocess_theta(exclude_type_clone.clone())?;
@@ -2034,82 +2052,103 @@ impl Engine {
                     .instruments
                     .get_shortest_maturity(Some(&insts_upto_bumped_day))
                     .unwrap();
-                let mut name_mat_pair_list: String = String::new();
+
+                let mut name_mat_pair_list = String::new();
                 for inst in insts_upto_bumped_day.iter() {
                     name_mat_pair_list.push_str(&format!(
                         "{} ({}): {}\n",
                         inst.get_name(),
-                        inst.get_code(),
+                        inst.get_code_str(),
                         inst.get_maturity().unwrap()
                     ));
                 }
-                warn!(
-                    "\n{}:{}\n\
-                    {}\n\
-                    (Engine::calculate -> theta calculation)\n\
-                    There are instruments whose maturity is within the evaluation_date + theta_day (= {:?}) \n\
-                    \n\
-                    The instruments are as follows:\n\
-                    {}\n\
-                    For the theta calculation for the above instruments, \n\
-                    the evaluation date is bumped to {:?} which is the shortest maturity of the above instruments. \n\
-                    Note that the theta calculation period may be too small to get accurate theta.\n", 
-                    file!(), line!(), self.msg_tag, &bumped_day,
-                    name_mat_pair_list,
-                    &shortest_maturity,
+                let msg_tag = self.msg_tag.as_str();
+                let msg = flashlog::lazy_string::LazyString::new(move || 
+                    format!(
+                        "{}\n\
+                        (Engine::calculate -> theta calculation)\n\
+                        There are instruments whose maturity is within the evaluation_date + theta_day (= {:?}) \n\
+                        \n\
+                        The instruments are as follows:\n\
+                        {}\n\
+                        For the theta calculation for the above instruments, \n\
+                        the evaluation date is bumped to {:?} which is the shortest maturity of the above instruments. \n\
+                        Note that the theta calculation period may be too small to get accurate theta.\n",
+                        msg_tag,
+                        &bumped_day,
+                        name_mat_pair_list,
+                        &shortest_maturity,
+                    )
                 );
+                flashlog::log_warn!("UnstableTheta", message = msg);
                 self.set_theta_for_given_instruments(insts_upto_bumped_day, shortest_maturity)?;
             }
 
             if !insts_over_bumped_day.is_empty() {
                 self.set_theta_for_given_instruments(insts_over_bumped_day, bumped_day)?;
             }
-            info!(
-                "* theta calculation is done (engine id: {}, time = {} whole time elapsed: {})",
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64()),
-            );
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* theta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!("Timer", message = msg);
         }
 
         if self.calculation_configuration.get_vega_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_vega()?;
-            info!(
-                "* vega calculation is done (engine id: {}, time = {} whole time elapsed: {})",
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64())
-            );
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* vega calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!("Timer", message = msg);
         }
 
         if self.calculation_configuration.get_rho_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_rho()?;
-            info!(
-                "* rho calculation is done (engine id: {}, time = {} whole time elapsed: {})",
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64())
-            );
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* rho calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!("Timer", message = msg);
         }
 
         if self.calculation_configuration.get_div_delta_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_div_delta()?;
-            info!(
-                "* div_delta calculation is done (engine id: {}, time = {} whole time elapsed: {})",
-                self.engine_id,
-                format_duration(timer.elapsed().as_secs_f64()),
-                format_duration(start_time.elapsed().as_secs_f64()),
-            );
+            let eng_id = self.engine_id;
+            let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
+            let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
+            let msg = flashlog::lazy_string::LazyString::new(move || {
+                format!(
+                    "* div_delta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
+                    eng_id, elapsed_sec1, elapsed_sec2
+                )
+            });
+            flashlog::log_info!("Timer", message = msg);
         }
 
         if self
             .calculation_configuration
             .get_vega_structure_calculation()
         {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_vega_structure()?;
             info!(
                 "* vega_structure calculation is done (engine id: {}, time = {} whole time elapsed: {})", 
@@ -2123,7 +2162,7 @@ impl Engine {
             .calculation_configuration
             .get_rho_structure_calculation()
         {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_rho_structure()?;
             info!(
                 "* rho calculation is done (engine id: {}, time = {} whole time elapsed: {})",
@@ -2137,7 +2176,7 @@ impl Engine {
             .calculation_configuration
             .get_div_structure_calculation()
         {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_div_structure()?;
             info!(
                 "* div_structure calculation is done (engine id: {}, time = {} whole time elapsed: {})", 
@@ -2148,7 +2187,7 @@ impl Engine {
         }
 
         if self.calculation_configuration.get_vega_matrix_calculation() {
-            timer = std::time::Instant::now();
+            timer = flashlog::get_unix_nano();
             self.set_vega_matrix()?;
             info!(
                 "* vega_matrix calculation is done (engine id: {}, time = {} whole time elapsed: {})", 
@@ -2160,12 +2199,12 @@ impl Engine {
         Ok(())
     }
 
-    pub fn get_calculation_result(&self) -> &HashMap<String, RefCell<CalculationResult>> {
+    pub fn get_calculation_result(&self) -> &FxHashMap<StaticId, RefCell<CalculationResult>> {
         &self.calculation_results
     }
 
-    pub fn get_calculation_result_clone(&self) -> HashMap<String, CalculationResult> {
-        let mut result = HashMap::new();
+    pub fn get_calculation_result_clone(&self) -> FxHashMap<StaticId, CalculationResult> {
+        let mut result = FxHashMap::default();
         for (key, value) in self.calculation_results.iter() {
             result.insert(key.clone(), value.borrow().clone());
         }

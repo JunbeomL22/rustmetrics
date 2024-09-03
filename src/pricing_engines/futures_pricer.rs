@@ -8,8 +8,9 @@ use crate::pricing_engines::npv_result::NpvResult;
 use crate::pricing_engines::pricer::PricerTrait;
 //
 use anyhow::{anyhow, Context, Result};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use time::OffsetDateTime;
+use rustc_hash::FxHashMap;
 
 #[derive(Debug, Clone)]
 pub struct FuturesPricer {
@@ -94,7 +95,7 @@ impl PricerTrait for FuturesPricer {
         res
     }
 
-    fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<HashMap<Currency, Real>> {
+    fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<FxHashMap<Currency, Real>> {
         match instrument {
             Instrument::Futures(futures) => {
                 let npv = self
@@ -105,7 +106,7 @@ impl PricerTrait for FuturesPricer {
                 let unit_notional = futures.get_unit_notional();
                 let exposure = (npv - average_trade_price) * unit_notional;
                 let currency = futures.get_currency();
-                let res = HashMap::from_iter(vec![(*currency, exposure)]);
+                let res: FxHashMap<Currency, Real> = [(currency.clone(), exposure)].iter().cloned().collect();
                 Ok(res)
             }
             _ => Err(anyhow!(
@@ -261,7 +262,7 @@ mod tests {
         // Replace these with the expected values
         let expected_npv = 346.38675;
         let expected_fx_exposure = 26.38675;
-        //let expected_coupons = HashMap::<OffsetDateTime, Real>::new(); // Assuming coupons is a HashMap
+        //let expected_coupons = FxHashMap::<OffsetDateTime, Real>::new(); // Assuming coupons is a FxHashMap
 
         assert!(
             (res - expected_npv).abs() < 1.0e-5,

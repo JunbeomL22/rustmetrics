@@ -101,6 +101,11 @@ mod tests {
         conventions::{BusinessDayConvention, DayCountConvention, PaymentFrequency},
         jointcalendar::JointCalendar,
     };
+    use crate::instruments::bond::BondInfo;
+    use crate::{
+        InstInfo,
+        InstType,
+    };
     //
     use anyhow::Result;
     use ndarray::array;
@@ -153,20 +158,35 @@ mod tests {
         // make it from crate::instruments::bond::Bond::new_from_convention
         let issue_date = datetime!(2024-01-02 00:00:00 UTC);
         let maturity = datetime!(2027-01-02 00:00:00 UTC);
+        let inst_id = StaticId::from_str("Bond1", "KRX");
+        let inst_info = InstInfo {
+            id: inst_id,
+            name: "Bond1".to_string(),
+            inst_type: InstType::Bond,
+            currency: Currency::KRW,
+            unit_notional: 10_000.0,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.clone()),
+            accounting_level: crate::AccountingLevel::L1,
+        };
+
+        let issuer_id = StaticId::from_str("Korea Government", "KRX");
+        let bond_info = BondInfo {
+            issuer_id,
+            issuer_type: IssuerType::Government,
+            credit_rating: CreditRating::None,
+            rank: RankType::Senior,
+        };
+
         let bond1 = Bond::new_from_conventions(
-            IssuerType::Government,
-            CreditRating::None,
-            "Korea Government".to_string(),
-            RankType::Senior,
-            Currency::KRW,
-            //
-            10_000.0,
+            inst_info,
+            bond_info,
+            
             false,
             //
-            issue_date.clone(),
-            issue_date.clone(),
-            Some(ktbf_maturity.clone()),
-            maturity,
+            Some(issue_date.clone()),
+            Some(issue_date.clone()),
+            None,
             //
             Some(0.03),
             None,
@@ -181,26 +201,36 @@ mod tests {
             PaymentFrequency::SemiAnnually,
             0,
             0,
-            //
-            "Bond1".to_string(),
-            "Bond1".to_string(),
         )?;
 
         let maturity = datetime!(2029-01-02 00:00:00 UTC);
+        let bond_id2 = StaticId::from_str("Bond2", "KRX");
+        let inst_info2 = InstInfo {
+            id: bond_id2,
+            name: "Bond2".to_string(),
+            inst_type: InstType::Bond,
+            currency: Currency::KRW,
+            unit_notional: 10_000.0,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.clone()),
+            accounting_level: crate::AccountingLevel::L1,
+        };
+
+        let bond_info2 = BondInfo {
+            issuer_id,
+            issuer_type: IssuerType::Government,
+            credit_rating: CreditRating::None,
+            rank: RankType::Senior,
+        };
         let bond2 = Bond::new_from_conventions(
-            IssuerType::Government,
-            CreditRating::None,
-            "Korea Government".to_string(),
-            RankType::Senior,
-            Currency::KRW,
+            inst_info2,
+            bond_info2,
             //
-            10_000.0,
             false,
             //
-            issue_date.clone(),
-            issue_date.clone(),
-            Some(ktbf_maturity.clone()),
-            maturity,
+            Some(issue_date.clone()),
+            Some(issue_date.clone()),
+            None,
             //
             Some(0.03),
             None,
@@ -215,24 +245,28 @@ mod tests {
             PaymentFrequency::SemiAnnually,
             0,
             0,
-            //
-            "Bond2".to_string(),
-            "Bond2".to_string(),
         )?;
 
         let virtual_bond = KtbfVirtualBond::new(3, 0.05, PaymentFrequency::SemiAnnually, 100.0);
 
+        let ktbf_id = StaticId::from_str("KTBF3Y", "KRX");
+        let ktbf_info = InstInfo {
+            id: ktbf_id,
+            name: "KTBF3Y".to_string(),
+            inst_type: InstType::KTBF,
+            currency: Currency::KRW,
+            unit_notional: 1_000_000.0,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(ktbf_maturity.clone()),
+            accounting_level: crate::AccountingLevel::L1,
+        };
+
         let ktbf = KTBF::new(
-            Currency::KRW,
-            1_000_000.0,
-            issue_date.clone(),
-            ktbf_maturity.clone(),
-            ktbf_maturity.clone(),
+            ktbf_info,
+            Some(issue_date.clone()),
             virtual_bond,
             vec![bond1, bond2],
-            "KTBF3Y".to_string(),
-            "KTBF".to_string(),
-            "KTBF".to_string(),
+            StaticId::from_str("KTBF3Y", "KRX"),
         )?;
 
         let ktbf_pricer = KtbfPricer::new(

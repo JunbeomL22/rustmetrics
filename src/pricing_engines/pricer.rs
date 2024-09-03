@@ -11,7 +11,7 @@ use crate::pricing_engines::{
 //
 use anyhow::Result;
 use enum_dispatch::enum_dispatch;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 #[enum_dispatch]
 pub trait PricerTrait {
@@ -20,8 +20,8 @@ pub trait PricerTrait {
 
     fn npv(&self, instrument: &Instrument) -> Result<Real>;
     /// unit_notional is considered
-    fn fx_exposure(&self, instrument: &Instrument, npv: Real) -> Result<HashMap<Currency, Real>> {
-        let mut map = HashMap::new();
+    fn fx_exposure(&self, instrument: &Instrument, npv: Real) -> Result<FxHashMap<Currency, Real>> {
+        let mut map = FxHashMap::default();
         map.insert(
             instrument.get_currency(),
             npv * instrument.get_unit_notional(),

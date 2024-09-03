@@ -137,7 +137,10 @@ pub mod test {
         vector_data::VectorData,
         surface_data::SurfaceData,
     };
-    
+    use crate::{
+        InstType,
+        InstInfo,
+    };
     use anyhow::Result;
     use ndarray::Array1;
     use std::{cell::RefCell, rc::Rc};
@@ -159,16 +162,17 @@ pub mod test {
             id,
         )));
 
-        let discount_curve_data = Ve
-        vectordatasample!(0.03, Currency::KRW, "Option Test Curve")?;
+        let discount_curve_data = VectorData::test_curve_data(0.03, Currency::KRW)?;
+        
         let discount_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &discount_curve_data,
             "Option Test Curve".to_string(),
-            "Option Test Curve".to_string(),
+            StaticId::from_str("Option Test Curve", "test"),
         )?));
 
-        let surface_data = surfacedatasample!(&eval_date, spot);
+        let surface_data = SurfaceData::test_data(spot, Some(eval_date.clone()))?;
+        
         let vega_structure_tenors = vec![
             String::from("1M"),
             String::from("2M"),
@@ -179,6 +183,7 @@ pub mod test {
             String::from("2Y"),
             String::from("3Y"),
         ];
+
         let vega_matrix_spot_moneyness = Array1::linspace(0.6, 1.4, 17);
 
         let local_volatility = LocalVolatilitySurface::initialize(
@@ -189,7 +194,7 @@ pub mod test {
             StickynessType::StickyToMoneyness,
             VolatilityInterplator::default(),
             "KOSPI2 Local Volatility".to_string(),
-            "KOSPI2 Local Volatility".to_string(),
+            StaticId::from_str("KOSPI2 Local Volatility", "KRX"),
         )
         .with_market_surface(
             &surface_data,
@@ -217,21 +222,27 @@ pub mod test {
 
         let issue_date = datetime!(2023-09-15 16:30:00 +09:00);
         let maturity = datetime!(2024-09-15 16:30:00 +09:00);
+        let option_id = StaticId::from_str("KOSPI2 Put Option", "KRX");
+        let option_info = InstInfo {
+            id: option_id,
+            name: "KOSPI2 Put Option".to_string(),
+            inst_type: InstType::VanillaOption,
+            accounting_level: crate::AccountingLevel::L1,
+            currency: Currency::KRW,
+            issue_date: Some(issue_date.clone()),
+            maturity: Some(maturity.clone()),
+            unit_notional: 250_000.0,
+        };
+
         let option = VanillaOption::new(
+            option_info,
             spot * 0.85,
-            250_000.0,
-            issue_date.clone(),
-            maturity.clone(),
-            maturity.clone(),
-            maturity.clone(),
-            vec!["KOSPI2".to_string()],
-            Currency::KRW,
+            None,
+            StaticId::from_str("KOSPI2", "KRX"),
             Currency::KRW,
             OptionType::Put,
             OptionExerciseType::European,
             OptionDailySettlementType::NotSettled,
-            "KOSPI2 Put Option".to_string(),
-            "KOSPI2 Put Option".to_string(),
         );
 
         let inst = Instrument::VanillaOption(option);

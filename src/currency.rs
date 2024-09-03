@@ -90,12 +90,12 @@ impl FxCode {
         }
     }
 
-    pub fn get_currency1(&self) -> &Currency {
-        &self.currency1
+    pub fn get_currency1(&self) -> Currency {
+        self.currency1
     }
 
-    pub fn get_currency2(&self) -> &Currency {
-        &self.currency2
+    pub fn get_currency2(&self) -> Currency {
+        self.currency2
     }
 
     pub fn reciprocal(self) -> Self {

@@ -17,6 +17,10 @@ use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
 use static_id::StaticId;
 use rustc_hash::FxHashMap;
+use flashlog::{
+    lazy_string::LazyString,
+    log_info,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct InstrumentCategory {
@@ -59,7 +63,7 @@ impl InstrumentCategory {
         // check underlying codes are the same (not inclusion)
         if let Some(underlying_ids) = &self.underlying_ids {
             if !underlying_ids_inp.is_empty()
-                && underlying_ids.iter().collect::<Vec<StaticId>>() != underlying_ids_inp
+                && underlying_ids.iter().cloned().collect::<Vec<StaticId>>() != underlying_ids_inp
             {
                 res = false;
             }
@@ -102,19 +106,19 @@ impl Default for EngineGenerator {
             calculation_configuration: CalculationConfiguration::default(),
             match_parameter: MatchParameter::default(),
             //
-            calculation_results: FxHashMap::new(),
+            calculation_results: FxHashMap::default(),
             //
             evaluation_date: EvaluationDate::default(),
             //
-            fx_data: Arc::new(FxHashMap::new()),
-            stock_data: Arc::new(FxHashMap::new()),
-            curve_data: Arc::new(FxHashMap::new()),
-            dividend_data: Arc::new(FxHashMap::new()),
-            equity_constant_volatility_data: Arc::new(FxHashMap::new()),
-            equity_volatility_surface_data: Arc::new(FxHashMap::new()),
-            fx_constant_volatility_data: Arc::new(FxHashMap::new()),
-            quanto_correlation_data: Arc::new(FxHashMap::new()),
-            past_daily_value_data: Arc::new(FxHashMap::new()),
+            fx_data: Arc::new(FxHashMap::default()),
+            stock_data: Arc::new(FxHashMap::default()),
+            curve_data: Arc::new(FxHashMap::default()),
+            dividend_data: Arc::new(FxHashMap::default()),
+            equity_constant_volatility_data: Arc::new(FxHashMap::default()),
+            equity_volatility_surface_data: Arc::new(FxHashMap::default()),
+            fx_constant_volatility_data: Arc::new(FxHashMap::default()),
+            quanto_correlation_data: Arc::new(FxHashMap::default()),
+            past_daily_value_data: Arc::new(FxHashMap::default()),
         }
     }
 }
@@ -191,7 +195,7 @@ impl EngineGenerator {
             }
         }
 
-        let mut inst_name_code: Vec<StaticId> = vec![];
+        let mut inst_name_msgs: Vec<String> = vec![];
         for (inst_id, is_distributed) in distribution_checker.iter().enumerate() {
             if !is_distributed {
                 let msg = format!(
@@ -200,20 +204,20 @@ impl EngineGenerator {
                     currency: {}\n\
                     underlying_ids: {:?}\n",
                     self.instruments[inst_id].get_name(),
-                    self.instruments[inst_id].get_code(),
+                    self.instruments[inst_id].get_code_str(),
                     self.instruments[inst_id].get_type_name(),
                     self.instruments[inst_id].get_currency(),
                     self.instruments[inst_id].get_underlying_ids(),
                 );
 
-                inst_name_code.push(msg);
+                inst_name_msgs.push(msg);
             }
         }
 
-        if !inst_name_code.is_empty() {
+        if !inst_name_msgs.is_empty() {
             return Err(anyhow!(
                 "The following instruments are not distributed:\n{}",
-                inst_name_code.join("\n"),
+                inst_name_msgs.join("\n"),
             ));
         }
 
@@ -224,7 +228,7 @@ impl EngineGenerator {
 
     /// spawn threads to create engine and calculate
     pub fn calculate(&mut self) -> Result<()> {
-        let shared_results = Arc::new(Mutex::new(FxHashMap::<StaticId, CalculationResult>::new()));
+        let shared_results = Arc::new(Mutex::new(FxHashMap::<StaticId, CalculationResult>::default()));
         let dt = self.evaluation_date.get_date_clone();
         let calc_res: Result<()> = self
             .instrument_group_vec
