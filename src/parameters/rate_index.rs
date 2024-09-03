@@ -240,7 +240,7 @@ mod tests {
         calendars::unitedstates::{UnitedStates, UnitedStatesType},
         jointcalendar::JointCalendar,
     };
-    use std::collections::HashMap;
+    use rustc_hash::FxHashMap;
     //
     use anyhow::Result;
     use ndarray::array;
@@ -281,14 +281,14 @@ mod tests {
             Some(dt.clone()),
             Currency::USD,
             "USDOIS".to_string(),
-            "USDOIS".to_string(),
+            StaticId::from_str("USDOIS", "KAP"),
         )?;
 
         let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &curve_data,
             "USDOIS".to_string(),
-            "USDOIS".to_string(),
+            StaticId::from_str("USDOIS", "KAP"),
         )?));
 
         let calc_end_date = dt + Duration::days(90);
@@ -303,7 +303,7 @@ mod tests {
             None,
         );
 
-        let mut history_map = HashMap::new();
+        let mut history_map = FxHashMap::default();
         //history_map.insert(datetime!(2023-12-29 16:30:00 -05:00), 0.06);
         history_map.insert(date!(2023 - 12 - 29), 0.03);
         history_map.insert(date!(2023 - 12 - 28), 0.03);
@@ -318,7 +318,7 @@ mod tests {
             UtcOffset::from_hms(NEW_YORK_OFFSET.0, NEW_YORK_OFFSET.1, NEW_YORK_OFFSET.2).unwrap(),
             cal.clone(),
             "SOFR1D".to_string(),
-            "SOFR1D".to_string(),
+            StaticId::from_str("SOFR1D", "KAP"),
         ));
 
         let rate = rate_index.get_coupon_amount(

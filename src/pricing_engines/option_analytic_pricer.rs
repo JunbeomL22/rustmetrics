@@ -124,9 +124,7 @@ impl PricerTrait for OptionAnalyticPricer {
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use crate::currency;
     use crate::currency::Currency;
-    use crate::data;
     use crate::enums::{OptionDailySettlementType, OptionExerciseType, OptionType, StickynessType};
     use crate::instrument::Instrument;
     use crate::instruments::vanilla_option::VanillaOption;
@@ -135,8 +133,11 @@ pub mod test {
     use crate::parameters::{
         quanto::Quanto, volatilities::volatiltiy_interpolator::VolatilityInterplator,
     };
-    use crate::utils;
-    use crate::{surfacedatasample, vectordatasample};
+    use crate::data::{
+        vector_data::VectorData,
+        surface_data::SurfaceData,
+    };
+    
     use anyhow::Result;
     use ndarray::Array1;
     use std::{cell::RefCell, rc::Rc};
@@ -158,7 +159,8 @@ pub mod test {
             id,
         )));
 
-        let discount_curve_data = vectordatasample!(0.03, Currency::KRW, "Option Test Curve")?;
+        let discount_curve_data = Ve
+        vectordatasample!(0.03, Currency::KRW, "Option Test Curve")?;
         let discount_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &discount_curve_data,

@@ -6,41 +6,43 @@ use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
 use crate::time::conventions::BusinessDayConvention;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use time::{Date, OffsetDateTime, Time, UtcOffset};
+use static_id::StaticId;
+use rustc_hash::FxHashMap;
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DailyClosePrice {
-    value: HashMap<Date, Real>,
+    value: FxHashMap<Date, Real>,
     close_time: Time,
     utc_offset: UtcOffset,
     calendar: Calendar,
     name: String,
-    code: String,
+    id: StaticId,
 }
 
 impl Default for DailyClosePrice {
     fn default() -> Self {
         DailyClosePrice {
-            value: HashMap::new(),
+            value: FxHashMap::default(),
             // korea stock market
             close_time: Time::from_hms(15, 40, 0).unwrap(),
             utc_offset: UtcOffset::from_hms(9, 0, 0).unwrap(),
             calendar: Calendar::SouthKorea(SouthKorea::new(SouthKoreaType::Krx)),
             name: String::new(),
-            code: String::new(),
+            id: StaticId::default(),
         }
     }
 }
 
 impl DailyClosePrice {
     pub fn new(
-        value: HashMap<Date, Real>,
+        value: FxHashMap<Date, Real>,
         close_time: Time,
         utc_offset: UtcOffset,
         calendar: Calendar,
         name: String,
-        code: String,
+        id: StaticId,
     ) -> DailyClosePrice {
         DailyClosePrice {
             value,
@@ -48,7 +50,7 @@ impl DailyClosePrice {
             utc_offset,
             calendar,
             name,
-            code,
+            id,
         }
     }
 
@@ -59,12 +61,12 @@ impl DailyClosePrice {
             utc_offset: *data.get_utc_offset(),
             calendar: data.get_calendar().clone(),
             name: data.get_name().clone(),
-            code: data.get_code().clone(),
+            id: data.get_id(),
         };
         Ok(res)
     }
 
-    pub fn get_value(&self) -> &HashMap<Date, Real> {
+    pub fn get_value(&self) -> &FxHashMap<Date, Real> {
         &self.value
     }
 
@@ -72,8 +74,8 @@ impl DailyClosePrice {
         &self.name
     }
 
-    pub fn get_code(&self) -> &String {
-        &self.code
+    pub fn get_id(&self) -> StaticId {
+        self.id
     }
 
     // Get method
@@ -113,7 +115,7 @@ impl DailyClosePrice {
         self.value.get_mut(key)
     }
 
-    pub fn set_value(&mut self, value: HashMap<Date, Real>) {
+    pub fn set_value(&mut self, value: FxHashMap<Date, Real>) {
         self.value = value;
     }
 
@@ -144,7 +146,7 @@ mod tests {
 
         let value_map = vec![(date1, 100.0), (date2, 200.0), (date3, 300.0)]
             .into_iter()
-            .collect::<HashMap<Date, Real>>();
+            .collect::<FxHashMap<Date, Real>>();
 
         past_price.set_value(value_map);
 

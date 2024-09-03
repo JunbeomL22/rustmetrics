@@ -161,7 +161,7 @@ mod tests {
             None, //evaluation_date.borrow().get_date_clone(),
             Currency::KRW,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )?;
 
         // make a discount curve (ZeroCurve)
@@ -169,7 +169,7 @@ mod tests {
             evaluation_date.clone(),
             &curve_data,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )?));
 
         // make a pricer
@@ -295,7 +295,7 @@ mod tests {
             None, //evaluation_date.borrow().get_date_clone(),
             Currency::KRW,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )?;
 
         // make a discount curve (ZeroCurve)
@@ -303,7 +303,7 @@ mod tests {
             evaluation_date.clone(),
             &curve_data,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )?));
 
         // define a vector data 1Y = 0.03, 5Y = 0.04
@@ -314,7 +314,7 @@ mod tests {
             None, //evaluation_date.borrow().get_date_clone(),
             Currency::KRW,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )?;
 
         // make a discount curve (ZeroCurve)
@@ -322,7 +322,7 @@ mod tests {
             evaluation_date.clone(),
             &forward_curve_data,
             "KRWIRS".to_string(),
-            "KRWIRS".to_string(),
+            StaticId::from_str("KRWIRS", "KAP"),
         )?));
 
         // make a pricer

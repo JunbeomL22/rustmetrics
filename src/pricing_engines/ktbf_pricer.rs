@@ -108,6 +108,7 @@ mod tests {
     use std::rc::Rc;
     use time::macros::datetime;
     use time::Duration;
+    use static_id::StaticId;
 
     #[test]
     fn test_ktbf_pricer() -> Result<()> {
@@ -120,13 +121,13 @@ mod tests {
             None, //eval_date.clone(),
             Currency::KRW,
             "KRWGOV".to_string(),
-            "KRWGOV".to_string(),
+            StaticId::from_str("KRWGOV", "KAP"),
         )?;
         let discount_curve = ZeroCurve::new(
             evaluation_date.clone(),
             &curve_data,
             "KRWGOV".to_string(),
-            "KRWGOV".to_string(),
+            StaticId::from_str("KRWGOV", "KAP"),
         )?;
 
         let borrowing_curve_data = VectorData::new(
@@ -136,13 +137,13 @@ mod tests {
             None, //eval_date.clone(),
             Currency::KRW,
             "KTBF3Y".to_string(),
-            "KTBF3Y".to_string(),
+            StaticId::from_str("KTBF3Y", "KRX"),
         )?;
         let borrowing_curve = ZeroCurve::new(
             evaluation_date.clone(),
             &borrowing_curve_data,
             "KTBF3Y".to_string(),
-            "KTBF3Y".to_string(),
+            StaticId::from_str("KTBF3Y", "KRX"),
         )?;
         let sk = Calendar::SouthKorea(SouthKorea::new(SouthKoreaType::Settlement));
         let calendar = JointCalendar::new(vec![sk])?;

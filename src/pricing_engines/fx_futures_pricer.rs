@@ -46,7 +46,7 @@ impl PricerTrait for FxFuturesPricer {
                     file!(),
                     line!(),
                     instrument.get_name(),
-                    instrument.get_code(),
+                    instrument.get_code_str(),
                 ))
             }
         };
@@ -71,8 +71,8 @@ impl PricerTrait for FxFuturesPricer {
 
     fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<HashMap<Currency, Real>> {
         let average_trade_price = instrument.get_average_trade_price();
-        let futures_currency = *instrument.get_currency();
-        let underlying_currency = *instrument.get_underlying_currency()?;
+        let futures_currency = instrument.get_currency();
+        let underlying_currency = instrument.get_underlying_currency()?;
         let maturity = match instrument.get_maturity() {
             Some(maturity) => maturity,
             None => {
@@ -81,7 +81,7 @@ impl PricerTrait for FxFuturesPricer {
                     file!(),
                     line!(),
                     instrument.get_name(),
-                    instrument.get_code(),
+                    instrument.get_id(),
                 ))
             }
         };
@@ -119,6 +119,7 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
     use time::macros::datetime;
+    use static_id::StaticId;
 
     #[test]
     fn test_fx_futures_pricer() -> Result<()> {
@@ -130,7 +131,7 @@ mod tests {
             None,
             Currency::KRW,
             "USDKRW".to_string(),
-            "USDKRW".to_string(),
+            StaticId::from_str("USDKRW", "SMB"),
         )));
 
         let underlying_curve_data = VectorData::new(
@@ -140,14 +141,14 @@ mod tests {
             Some(eval_date),
             Currency::KRW,
             "USDOIS".to_string(),
-            "USDOIS".to_string(),
+            StaticId::from_str("USDOIS", "KAP"),
         )?;
 
         let usdois_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &underlying_curve_data,
             "USDOIS".to_string(),
-            "USDOIS".to_string(),
+            StaticId::from_str("USDOIS", "KAP"),
         )?));
 
         let futures_curve_data = VectorData::new(
@@ -176,6 +177,10 @@ mod tests {
 
         let issue_date = datetime!(2023-12-15 00:00:00 UTC);
         let last_trade_date = datetime!(2024-12-15 00:00:00 UTC);
+
+        let inst_id = StaticId::from_str("USDKRW Futures", "KRX");
+
+
         let fxfutures = FxFutures::new(
             1_300.0,
             issue_date.clone(),

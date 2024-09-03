@@ -493,8 +493,6 @@ mod tests {
         AndreasenHuge, VolatilityInterplator,
     };
     use crate::utils;
-    use crate::{surfacedatasample, vectordatasample};
-
     use crate::data;
     use crate::definitions::{Real, Time};
     use crate::enums::StickynessType;
@@ -521,15 +519,18 @@ mod tests {
         )));
         let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_date.clone())));
 
-        let dummy_data = vectordatasample!(0.00, Currency::KRW, "mock curve data")?;
+        let dummy_data = VectorData::test_curve_data(0.02, Currency::KRW)?;
         let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &dummy_data,
             "KRWGOV".to_string(),
-            "zero curve".to_string(),
+            StaticId::from_str("zero curve", "nil"),
         )?));
 
-        let surface_data = surfacedatasample!(&eval_date, spot);
+        let surface_data = SurfaceData::test_data(
+            0.0,
+            Some(datetime!(2024-01-02 15:40:00 +09:00)),
+        )?;
 
         //println!("vector_data: {:?}", dummy_data);
         //println!("surface_data: {:?}", surface_data);

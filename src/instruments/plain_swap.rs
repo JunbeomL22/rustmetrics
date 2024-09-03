@@ -613,6 +613,7 @@ mod tests {
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};
     use time::macros::datetime;
+    use static_id::StaticId;
 
     #[test]
     fn test_crs() -> Result<()> {
@@ -701,14 +702,14 @@ mod tests {
             Some(issue_date.clone()),
             Currency::USD,
             "USDIRS".to_string(),
-            "USDIRS".to_string(),
+            StaticId::from_str("USDIRS", "KRX"),
         )?;
 
         let usdirs_curve = ZeroCurve::new(
             evaluation_date.clone(),
             &usdirs_data,
             "USDIRS".to_string(),
-            "USD IR Curve".to_string(),
+            StaticId::from_str("USD IR Curve", "KAP"),
         )?;
 
         let floating_curve = Rc::new(RefCell::new(usdirs_curve));

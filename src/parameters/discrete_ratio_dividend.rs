@@ -11,6 +11,7 @@ use ndarray::Array1;
 use std::{cell::RefCell, rc::Rc};
 use time;
 use time::OffsetDateTime;
+use static_id::StaticId;
 
 #[derive(Clone, Debug)]
 enum DividendInterpolator {
@@ -28,8 +29,7 @@ pub struct DiscreteRatioDividend {
     deduction_interpolator: DividendInterpolator,
     spot: Real,
     name: String,
-    #[allow(dead_code)]
-    code: String,
+    id: StaticId,
 }
 
 impl DiscreteRatioDividend {
@@ -53,7 +53,7 @@ impl DiscreteRatioDividend {
         data: &VectorData, // dividend amount
         spot: Real,
         name: String,
-        code: String,
+        id: StaticId,
     ) -> Result<DiscreteRatioDividend> {
         // Begining of the function
         //let time_calculator = NullCalendar::default();
@@ -132,7 +132,7 @@ impl DiscreteRatioDividend {
             deduction_interpolator,
             spot,
             name,
-            code,
+            id,
         };
         Ok(res)
     }
@@ -290,56 +290,6 @@ impl DiscreteRatioDividend {
     }
 }
 
-/*
-impl Parameter for DiscreteRatioDividend {
-    /// this does not change the original data such as
-    /// self.evalaution_date, self.ex_dividend_dates, self.dividend_yields
-    /// but only change the dividend_deduction interpolator
-    fn update_evaluation_date(&mut self, date: &EvaluationDate) -> Result<()> {
-        let eval_dt: OffsetDateTime = date.get_date_clone();
-
-        let mut ex_dividend_dates_for_interpolator = self.ex_dividend_dates.clone();
-        let mut div_yields_vec = self.dividend_yields.to_vec();
-        let mut date_integers_for_interpolator_vec = self.date_integers.clone().to_vec();
-
-        let mut i = 0;
-        let mut checker = 0;
-        while i < self.ex_dividend_dates.len() {
-            if self.ex_dividend_dates[checker] < eval_dt {
-                ex_dividend_dates_for_interpolator.remove(i);
-                div_yields_vec.remove(i);
-                date_integers_for_interpolator_vec.remove(i);
-                checker += 1;
-            } else {
-                i += 1;
-            }
-        }
-
-        let dividend_yields_for_interpolator = Array1::from(div_yields_vec);
-        let mut incremental_deduction_ratio = Array1::zeros(dividend_yields_for_interpolator.len());
-        let mut temp = 1.0;
-        for (i, &yield_value) in (&dividend_yields_for_interpolator).iter().enumerate() {
-            temp *= 1.0 - yield_value;
-            incremental_deduction_ratio[i] = temp;
-        }
-
-        if incremental_deduction_ratio.len() == 0 {
-            self.deduction_interpolator = DividendInterpolator::Constant(ConstantInterpolator1D::new(1.0)?);
-        } else {
-            let right_extrapolation_value = Some(incremental_deduction_ratio[incremental_deduction_ratio.len() - 1]);
-            let deduction_interpolator = StepwiseInterpolator1D::new(
-                Array1::from_vec(date_integers_for_interpolator_vec),
-                incremental_deduction_ratio,
-                true,
-                Some(1.0),
-                right_extrapolation_value,
-            )?;
-            self.deduction_interpolator = DividendInterpolator::Stepwise(deduction_interpolator);
-        }
-        Ok(())
-    }
-}
-*/
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -377,7 +327,7 @@ mod tests {
             Some(datetime!(2021-01-01 17:30:00 +09:00)),
             Currency::KRW,
             "test".to_string(),
-            "test".to_string(),
+            StaticId::from_str("test", "test"),
         )
         .expect("Failed to create VectorData");
 
@@ -388,7 +338,7 @@ mod tests {
             &data,
             spot,
             name.clone(),
-            name.clone(),
+            StaticId::from_str(name.as_str(), "test"),
         )
         .expect("Failed to create DiscreteRatioDividend");
 

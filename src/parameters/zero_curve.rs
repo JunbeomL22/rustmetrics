@@ -17,6 +17,7 @@ use ndarray::{array, Array1};
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
+use static_id::StaticId;
 
 #[derive(Clone, Debug)]
 enum ZeroCurveInterpolator {
@@ -37,7 +38,7 @@ pub struct ZeroCurve {
     discount_interpolator: LinearInterpolator1D,
     time_calculator: NullCalendar,
     name: String,
-    code: String,
+    id: StaticId,
 }
 
 impl ZeroCurve {
@@ -61,7 +62,7 @@ impl ZeroCurve {
         evaluation_date: Rc<RefCell<EvaluationDate>>,
         data: &VectorData,
         name: String,
-        code: String,
+        id: StaticId,
     ) -> Result<ZeroCurve> {
         let rate_times = data.get_times_clone();
         let zero_rates = data.get_value_clone();
@@ -151,7 +152,7 @@ impl ZeroCurve {
             discount_interpolator,
             time_calculator,
             name,
-            code,
+            id,
         };
         Ok(res)
     }
@@ -258,7 +259,7 @@ impl ZeroCurve {
             Some(evaluation_date.borrow().get_date_clone()),
             Currency::NIL,
             name.clone(),
-            name.clone(),
+            StaticId::from_str(name.as_str(), "nil"),
         )
         .with_context(|| "error in ZeroCurve::dummy_curve")?;
 
@@ -266,7 +267,7 @@ impl ZeroCurve {
             evaluation_date,
             &data,
             String::from("Dummy"),
-            String::from("Dummy"),
+            StaticId::from_str("Dummy", "nil"),
         )
     }
     pub fn get_discount_factor(&self, time: Time) -> Result<Real> {
@@ -440,8 +441,8 @@ impl ZeroCurve {
         self.discount_times.clone()
     }
 
-    pub fn get_code(&self) -> &String {
-        &self.code
+    pub fn get_id(&self) -> StaticId {
+        self.id
     }
 
     pub fn get_name_clone(&self) -> String {
@@ -486,7 +487,7 @@ mod tests {
             Some(param_dt),
             Currency::NIL,
             "vector data in test_zero_curve".to_string(),
-            "vector data in test_zero_curve".to_string(),
+            StaticId::from_str("vector data in test_zero_curve", ""),
         )
         .expect("error in test_zero_curve");
 
@@ -494,7 +495,7 @@ mod tests {
             evaluation_date,
             &data,
             String::from("test"),
-            "test".to_string(),
+            StaticId::from_str("test", ""),
         )
         .expect("error in test_zero_curve");
 

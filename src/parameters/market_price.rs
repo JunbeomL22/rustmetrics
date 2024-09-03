@@ -216,7 +216,7 @@ mod tests {
             Some(eval_dt),
             Currency::NIL,
             "dividend vecto data".to_string(),
-            "dividend vector data".to_string(),
+            StaticId::from_str("dividend vector data", ""),
         )
         .expect("failed to create VectorData");
 
@@ -225,7 +225,7 @@ mod tests {
             &data,
             spot,
             "MockMarketPrice".to_string(),
-            "MockMarketPrice".to_string(),
+            StaticId::from_str("MockMarketPrice", ""),
         )
         .expect("failed to create DiscreteRatioDividend");
 

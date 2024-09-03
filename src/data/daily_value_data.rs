@@ -2,41 +2,42 @@ use crate::definitions::Real;
 use crate::time::calendar::Calendar;
 use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
+use static_id::StaticId;
 use time::{Date, Time, UtcOffset};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DailyValueData {
-    value: HashMap<Date, Real>,
-    close_time: Time,
-    utc_offset: UtcOffset,
-    calendar: Calendar,
-    name: String,
-    code: String,
+    pub value: FxHashMap<Date, Real>,
+    pub close_time: Time,
+    pub utc_offset: UtcOffset,
+    pub calendar: Calendar,
+    pub name: String,
+    pub id: StaticId,
 }
 
 impl Default for DailyValueData {
     fn default() -> Self {
         DailyValueData {
-            value: HashMap::new(),
+            value: FxHashMap::default(),
             // korea stock market
             close_time: Time::from_hms(15, 40, 0).unwrap(),
             utc_offset: UtcOffset::from_hms(9, 0, 0).unwrap(),
             calendar: Calendar::SouthKorea(SouthKorea::new(SouthKoreaType::Krx)),
             name: String::new(),
-            code: String::new(),
+            id: StaticId::default(),
         }
     }
 }
 
 impl DailyValueData {
     pub fn new(
-        value: HashMap<Date, Real>,
+        value: FxHashMap<Date, Real>,
         close_time: Time,
         utc_offset: UtcOffset,
         calendar: Calendar,
         name: String,
-        code: String,
+        id: StaticId,
     ) -> DailyValueData {
         DailyValueData {
             value,
@@ -44,11 +45,11 @@ impl DailyValueData {
             utc_offset,
             calendar,
             name,
-            code,
+            id,
         }
     }
 
-    pub fn get_value(&self) -> &HashMap<Date, Real> {
+    pub fn get_value(&self) -> &FxHashMap<Date, Real> {
         &self.value
     }
 
@@ -56,8 +57,8 @@ impl DailyValueData {
         &self.name
     }
 
-    pub fn get_code(&self) -> &String {
-        &self.code
+    pub fn get_id(&self) -> StaticId {
+        self.id
     }
 
     // Get method
