@@ -27,6 +27,7 @@ use crate::pricing_engines::{
 };
 use crate::time::{calendar_trait::CalendarTrait, calendars::nullcalendar::NullCalendar};
 use crate::util::format_duration;
+use crate::InstInfo;
 //
 use anyhow::{anyhow, bail, Context, Result};
 use ndarray::Array2;
@@ -347,7 +348,7 @@ impl Engine {
                     borrowing_curve,
                     stickyness,
                     lv_interpolator,
-                    data.name,
+                    data.name.clone(),
                     und_code,
                 )
                 .with_constant_volatility(
@@ -393,7 +394,7 @@ impl Engine {
                         "({}:{}) failed to get borrowing curve for {} in creating volatility surface\n\
                         zero curves list:\n {:?}",
                         file!(), line!(), und_code,
-                        zero_curves.keys().map(|s| s.as_str()).collect::<Vec<&str>>().join(" | "), 
+                        zero_curves.keys().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "), 
                     ))?.clone();
                 let stickyness = self.calculation_configuration.get_stickyness_type();
                 let lv_interpolator = self.calculation_configuration.get_lv_interpolator();
@@ -429,7 +430,7 @@ impl Engine {
         let quanto_fx_und_pair = self.instruments.get_all_quanto_fxcode_und_pairs();
         let unique_fxcodes: FxHashSet<FxCode> = quanto_fx_und_pair
             .iter()
-            .map(|(_, second)| **second)
+            .map(|(_, second)| *second)
             .collect();
 
         let mut fx_volatilities = FxHashMap::default();
@@ -457,13 +458,14 @@ impl Engine {
         // quanto parameter
         let mut quantos = FxHashMap::default();
         for (und_code, fxcode) in quanto_fx_und_pair {
-            if quanto_correlation_data.contains_key(&(und_code.clone(), *fxcode)) {
+            //if quanto_correlation_data.contains_key(&(und_code.clone(), *fxcode)) {
+            if let Some(data) = quanto_correlation_data.get(&(und_code, fxcode)) {
                 let data = quanto_correlation_data
-                    .get(&(und_code.clone(), *fxcode))
+                    .get(&(und_code, fxcode))
                     .unwrap();
                 let rc = Rc::new(RefCell::new(
                     Quanto::new(
-                        fx_volatilities.get(fxcode)
+                        fx_volatilities.get(&fxcode)
                             .with_context(|| anyhow!(
                                 "({}:{}) failed to get fx volatility for ({:?} {:?}) in creating quanto correlation parameter", 
                                 file!(), line!(), und_code, fxcode))?
@@ -472,7 +474,7 @@ impl Engine {
                         fxcode,
                         und_code,
                     )));
-                quantos.insert((und_code.clone(), *fxcode), rc);
+                quantos.insert((und_code, fxcode), rc);
             } else {
                 bail!(
                     "({}:{}) failed to get quanto correlation data for {:?}",
@@ -526,7 +528,14 @@ impl Engine {
             }
         }
 
-        info!("* (engine-id: {}) set all parameters", self.engine_id);
+        let id = self.engine_id;
+        let msg = flashlog::lazy_string::LazyString::new(move || {
+            format!(
+                "Engine {} is initialized with parameter data\n",
+                id
+            )
+        });
+        flashlog::log_info!("Notification", message = msg);
 
         Ok(self)
     }
@@ -548,12 +557,9 @@ impl Engine {
             .iter()
             .map(|c| c.as_str())
             .collect();
-        let all_und_codes: Vec<&str> = self
-            .instruments
-            .get_all_underlying_ids()
-            .iter()
-            .map(|c| c.as_str())
-            .collect();
+        let all_und_codes = self.instruments.get_all_underlying_ids()
+            .into_iter().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | ");
+            
         self.msg_tag = format!(
             "<ENGINE>\n\
             engine-id: {}\n\
@@ -575,28 +581,18 @@ impl Engine {
             let mut inst_codes = Vec::<StaticId>::new();
             let mut inst_mat = Vec::<Option<OffsetDateTime>>::new();
             for inst in insts_over_maturity {
-                inst_codes.push(inst.get_code().clone());
+                inst_codes.push(inst.get_id());
                 let mat = inst.get_maturity();
                 match mat {
                     Some(m) => inst_mat.push(Some(*m)),
                     None => inst_mat.push(None),
                 }
-            }
-
-            let display = inst_codes
-                .iter()
-                .zip(inst_mat.iter())
-                .map(|(code, mat)| match mat {
-                    Some(m) => format!("{}: {:}", code, m),
-                    None => format!("{}: None", code),
-                })
-                .collect::<Vec<StaticId>>()
-                .join("\n");
+            }      
             bail!(
                 "(Engine::initialize_instruments) There are instruments with maturity within the evaluation date\n\
                 evaluation date: {:?}\n\
                 {}\n",
-                dt, display
+                dt, inst_codes.into_iter().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "),
             );
         }
 
@@ -608,7 +604,7 @@ impl Engine {
             let mut inst_codes = Vec::<StaticId>::new();
             let mut inst_mat = Vec::<Option<OffsetDateTime>>::new();
             for inst in insts_with_very_short_maturity {
-                inst_codes.push(inst.get_code().clone());
+                inst_codes.push(inst.get_id());
                 let mat = inst.get_maturity();
                 match mat {
                     Some(m) => inst_mat.push(Some(*m)),
@@ -616,21 +612,11 @@ impl Engine {
                 }
             }
 
-            let display = inst_codes
-                .iter()
-                .zip(inst_mat.iter())
-                .map(|(code, mat)| match mat {
-                    Some(m) => format!("{}: {:}", code, m),
-                    None => format!("{}: None", code),
-                })
-                .collect::<Vec<StaticId>>()
-                .join("\n");
-
             println!(
                 "\n(Engine::initialize_instruments) There are instruments with a very short maturity (within 6 hours) \n\
                 Note that these products may produce numerical errors.
                 <LIST>\n{}\n{}\n",
-                display,
+                inst_codes.into_iter().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "),
                 self.msg_tag
             );
         }
@@ -638,24 +624,14 @@ impl Engine {
         self.instruments_in_action = self.instruments.get_instruments_clone();
 
         for inst in self.instruments.iter() {
-            let code = inst.get_code();
-            let inst_type = inst.get_type_name();
-            let instrument_information = InstrumentInfo::new(
-                inst.get_name().to_string(),
-                code.to_string(),
-                inst_type,
-                *inst.get_currency(),
-                inst.get_unit_notional(),
-                inst.get_maturity(),
-            );
-
+            let inst_info = inst.get_inst_info();
             let init_res = CalculationResult::new(
-                instrument_information,
+                inst_info.clone(),
                 self.evaluation_date.borrow().get_date_clone(),
             );
 
             self.calculation_results
-                .insert(inst.get_code().clone(), RefCell::new(init_res));
+                .insert(inst.get_id(), RefCell::new(init_res));
         }
         Ok(self)
     }
@@ -680,12 +656,12 @@ impl Engine {
                     "({}:{}) failed to create pricer for {} ({})\n{}",
                     file!(),
                     line!(),
-                    inst.get_code(),
+                    inst.get_id(),
                     inst.get_type_name(),
                     self.msg_tag,
                 )
             })?;
-            self.pricers.insert(inst.get_code().clone(), pricer);
+            self.pricers.insert(inst.get_id().clone(), pricer);
         }
         Ok(())
     }
@@ -698,8 +674,8 @@ impl Engine {
     pub fn get_npvs(&self) -> Result<FxHashMap<StaticId, Real>> {
         let mut npvs = FxHashMap::default();
         for inst in &self.instruments_in_action {
-            let inst_code = inst.get_code();
-            let pricer = self.pricers.get(inst_code).with_context(|| {
+            let inst_code = inst.get_id();
+            let pricer = self.pricers.get(&inst_code).with_context(|| {
                 anyhow!(
                     "({}:{}) <Egnine::get_npvs> failed to get pricer for {}\n{}",
                     file!(),
@@ -727,8 +703,8 @@ impl Engine {
     pub fn get_npv_results(&self) -> Result<FxHashMap<StaticId, NpvResult>> {
         let mut npvs = FxHashMap::default();
         for inst in &self.instruments_in_action {
-            let inst_code = inst.get_code();
-            let pricer = self.pricers.get(inst_code).with_context(|| {
+            let inst_code = inst.get_id();
+            let pricer = self.pricers.get(&inst_code).with_context(|| {
                 anyhow!(
                     "({}:{}) <Engine::get_npv_results> failed to get pricer for {}\n{}",
                     file!(),
@@ -739,7 +715,7 @@ impl Engine {
             })?;
 
             let npv = pricer.npv_result(inst)?;
-            npvs.insert(inst.get_code().clone(), npv);
+            npvs.insert(inst.get_id().clone(), npv);
         }
         Ok(npvs)
     }
@@ -776,8 +752,8 @@ impl Engine {
     pub fn set_fx_exposures(&mut self) -> Result<()> {
         let mut fx_exposures = FxHashMap::default();
         for inst in &self.instruments_in_action {
-            let inst_code = inst.get_code();
-            let pricer = self.pricers.get(inst_code).ok_or_else(|| {
+            let inst_code = inst.get_id();
+            let pricer = self.pricers.get(&inst_code).ok_or_else(|| {
                 anyhow!(
                     "failed to get pricer for {} in getting fx-exposure",
                     inst_code
@@ -786,7 +762,7 @@ impl Engine {
 
             let npv = self
                 .calculation_results
-                .get(inst_code)
+                .get(&inst_code)
                 .ok_or_else(|| {
                     anyhow!("failed to get npv for {} in getting fx-exposure", inst_code)
                 })?
@@ -799,7 +775,7 @@ impl Engine {
                 .fx_exposure(inst, npv)
                 .context("failed to get fx exposure")?;
 
-            fx_exposures.insert(inst.get_code(), fx_exposure);
+            fx_exposures.insert(inst.get_id(), fx_exposure);
         }
 
         for (code, result) in self.calculation_results.iter() {
@@ -827,7 +803,7 @@ impl Engine {
 
         // set delta for values * DELTA_PNL_UNIT, gamma = 0.0
         for inst in insts {
-            let inst_code = inst.get_code();
+            let inst_code = inst.get_id();
             let unitamt = inst.get_unit_notional();
             let npv = self
                 .calculation_results
@@ -964,11 +940,11 @@ impl Engine {
                     )
                 })?)
                 .borrow_mut()
-                .set_single_delta(und_code, delta * unitamt);
+                .set_single_delta(*und_code, delta * unitamt);
 
                 mid = self
                     .calculation_results
-                    .get(inst.get_code())
+                    .get(&inst.get_id())
                     .ok_or_else(|| anyhow!("result is not set"))?
                     .borrow()
                     .get_npv_result()
@@ -981,17 +957,17 @@ impl Engine {
 
                 (*self
                     .calculation_results
-                    .get(inst.get_code())
+                    .get(&inst.get_id())
                     .ok_or_else(|| {
                         anyhow!(
                             "({}:{}) result is not set for {}",
                             file!(),
                             line!(),
-                            inst.get_code(),
+                            inst.get_id(),
                         )
                     })?)
                 .borrow_mut()
-                .set_single_gamma(und_code, gamma * unitamt);
+                .set_single_gamma(*und_code, gamma * unitamt);
             }
 
             {
@@ -1127,9 +1103,9 @@ impl Engine {
             npvs_up = self.get_npvs().context("failed to get npvs")?; // instrument code (StaticId) -> npv (Real
 
             for inst in &self.instruments_in_action {
-                let inst_code = inst.get_code();
+                let inst_code = inst.get_id();
                 let unitamt = inst.get_unit_notional();
-                let npv_up = npvs_up.get(inst_code).ok_or_else(|| {
+                let npv_up = npvs_up.get(&inst_code).ok_or_else(|| {
                     anyhow!(
                         "({}:{}) npv_up is not set for {}",
                         file!(),
@@ -1670,10 +1646,16 @@ impl Engine {
             // deduct the cashflow inbetween
             // the scope bound is for borrowing the result
             {
-                let result_borrow = result.borrow();
-                let cashflows = result_borrow.get_cashflows().ok_or_else(|| {
-                    anyhow!("cashflows is not set for {} ({})", inst_code, inst_type,)
-                })?;
+                let result_borrow = match result.borrow().get_cashflows() {
+                    Some(r) => r,
+                    None => {
+                        return Err(anyhow!(
+                            "cashflows is not set for {} ({})",
+                            inst_code,
+                            inst_type,
+                        ))
+                    }
+                };
 
                 cash_sum = 0.0;
                 for (date, cash) in cashflows.iter() {
@@ -1855,6 +1837,7 @@ impl Engine {
         let calc_dates = calc_tenors
             .iter()
             .map(|tenor| {
+                
                 add_period(
                     &self.evaluation_date.borrow().get_date_clone(),
                     tenor.as_str(),

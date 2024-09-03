@@ -7,8 +7,9 @@ use crate::parameters::zero_curve::ZeroCurve;
 use crate::pricing_engines::{npv_result::NpvResult, pricer::PricerTrait};
 //
 use anyhow::{Context, Result};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use time::OffsetDateTime;
+use rustc_hash::FxHashMap;
 
 /// forward_curve (Optional<Rc<RefCell<ZeroCurve>>>): forward curve for floating rate bond, so it is optional
 /// past_fixing_data (Optional<Rc<CloseData>>): past fixing data for floating rate bond, so it is optional
@@ -72,8 +73,8 @@ impl PricerTrait for BondPricer {
         let pricing_date = instrument.get_pricing_date()?.unwrap_or(&eval_dt);
 
         let mut npv: Real = 0.0;
-        let mut coupon_amounts: HashMap<usize, (OffsetDateTime, Real)> = HashMap::new();
-        let mut coupon_payment_probability: HashMap<usize, (OffsetDateTime, Real)> = HashMap::new();
+        let mut coupon_amounts: FxHashMap<usize, (OffsetDateTime, Real)> = FxHashMap::default();
+        let mut coupon_payment_probability: FxHashMap<usize, (OffsetDateTime, Real)> = FxHashMap::default();
 
         let mut disc_factor: Real;
 
@@ -234,7 +235,7 @@ mod tests {
 
         let cashflows = bond.get_cashflows(&bond_pricing_date, None, None)?;
 
-        let filtered_cashflows: HashMap<OffsetDateTime, Real> = cashflows
+        let filtered_cashflows: FxHashMap<OffsetDateTime, Real> = cashflows
             .iter()
             .filter(|(&key, _)| key > dt)
             .map(|(&key, &value)| (key, value))

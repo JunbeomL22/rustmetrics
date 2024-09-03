@@ -10,6 +10,7 @@ use crate::parameters::{
     volatilities::volatiltiy_interpolator::VolatilityInterplator, volatility::VolatilityTrait,
     zero_curve::ZeroCurve,
 };
+use crate::Tenor;
 use crate::time::calendar_trait::CalendarTrait;
 use crate::time::calendars::nullcalendar::NullCalendar;
 use crate::utils::string_arithmetic::add_period;
@@ -215,7 +216,7 @@ impl LocalVolatilitySurface {
     pub fn with_constant_volatility(
         mut self,
         constant_volatility: &ValueData,
-        vega_structure_tenors: Vec<String>,
+        vega_structure_tenors: Vec<Tenor>,
         vega_matrix_spot_moneyness: Array1<Real>,
     ) -> Result<LocalVolatilitySurface> {
         let eval_date = self.evaluation_date.borrow().get_date_clone();

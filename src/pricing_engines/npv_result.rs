@@ -2,9 +2,9 @@ use crate::definitions::Real;
 use crate::utils::number_format::write_number_with_commas;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Sub};
 use time::OffsetDateTime;
+use rustc_hash::FxHashMap;
 /// NPV result
 /// npv: Real
 /// coupon_amounts: id -> (datetimes, amount)
@@ -12,8 +12,8 @@ use time::OffsetDateTime;
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct NpvResult {
     npv: Real,
-    cashflow_amounts: HashMap<usize, (OffsetDateTime, Real)>,
-    cashflow_probabilities: HashMap<usize, (OffsetDateTime, Real)>,
+    cashflow_amounts: FxHashMap<usize, (OffsetDateTime, Real)>,
+    cashflow_probabilities: FxHashMap<usize, (OffsetDateTime, Real)>,
 }
 
 impl std::fmt::Debug for NpvResult {
@@ -53,15 +53,15 @@ impl NpvResult {
     pub fn new_from_npv(npv: Real) -> NpvResult {
         NpvResult {
             npv,
-            cashflow_amounts: HashMap::new(),
-            cashflow_probabilities: HashMap::new(),
+            cashflow_amounts: FxHashMap::default(),
+            cashflow_probabilities: FxHashMap::default(),
         }
     }
 
     pub fn new(
         npv: Real,
-        cashflow_amounts: HashMap<usize, (OffsetDateTime, Real)>,
-        cashflow_probabilities: HashMap<usize, (OffsetDateTime, Real)>,
+        cashflow_amounts: FxHashMap<usize, (OffsetDateTime, Real)>,
+        cashflow_probabilities: FxHashMap<usize, (OffsetDateTime, Real)>,
     ) -> NpvResult {
         NpvResult {
             npv,
@@ -74,8 +74,8 @@ impl NpvResult {
         self.npv
     }
 
-    pub fn get_expected_coupon_amount(&self) -> Result<HashMap<OffsetDateTime, Real>> {
-        let mut res = HashMap::new();
+    pub fn get_expected_coupon_amount(&self) -> Result<FxHashMap<OffsetDateTime, Real>> {
+        let mut res = FxHashMap::default();
         for (id, (datetime, amount)) in self.cashflow_amounts.iter() {
             let prob = self
                 .cashflow_probabilities
@@ -86,7 +86,7 @@ impl NpvResult {
         Ok(res)
     }
 
-    pub fn get_cashflow_amounts(&self) -> &HashMap<usize, (OffsetDateTime, Real)> {
+    pub fn get_cashflow_amounts(&self) -> &FxHashMap<usize, (OffsetDateTime, Real)> {
         &self.cashflow_amounts
     }
 }
@@ -95,8 +95,8 @@ impl Default for NpvResult {
     fn default() -> NpvResult {
         NpvResult {
             npv: 0.0,
-            cashflow_amounts: HashMap::new(),
-            cashflow_probabilities: HashMap::new(),
+            cashflow_amounts: FxHashMap::default(),
+            cashflow_probabilities: FxHashMap::default(),
         }
     }
 }

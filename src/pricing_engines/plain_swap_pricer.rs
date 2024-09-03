@@ -7,7 +7,7 @@ use crate::parameters::{market_price::MarketPrice, past_price::DailyClosePrice};
 use crate::pricing_engines::{npv_result::NpvResult, pricer::PricerTrait};
 //
 use anyhow::Result;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use time::OffsetDateTime;
 use rustc_hash::FxHashMap;
 
@@ -47,8 +47,8 @@ impl PricerTrait for PlainSwapPricer {
             None => 1.0,
         };
 
-        let mut cashflow_amounts: HashMap<usize, (OffsetDateTime, Real)> = HashMap::new();
-        let mut cashflow_probabilities: HashMap<usize, (OffsetDateTime, Real)> = HashMap::new();
+        let mut cashflow_amounts: FxHashMap<usize, (OffsetDateTime, Real)> = FxHashMap::default();
+        let mut cashflow_probabilities: FxHashMap<usize, (OffsetDateTime, Real)> = FxHashMap::default();
         let mut fixed_res = 0.0;
         let mut floating_res = 0.0;
         let mut discount_factor: Real;

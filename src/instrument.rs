@@ -59,7 +59,7 @@ pub trait InstrumentTrait {
     // so the default action is to return an empty vector
     fn get_underlying_ids(&self) -> Vec<StaticId> { vec![] }
 
-    fn get_quanto_fxcode_und_pair(&self) -> Vec<(StaticId, &FxCode)> { vec![] }
+    fn get_quanto_fxcode_und_pair(&self) -> Vec<(StaticId, FxCode)> { vec![] }
 
     fn get_all_fxcodes_for_pricing(&self) -> Vec<FxCode> { vec![] }
 
@@ -311,7 +311,7 @@ impl Instruments {
         fxcodes
     }
 
-    pub fn get_all_quanto_fxcode_und_pairs(&self) -> FxHashSet<(StaticId, &FxCode)> {
+    pub fn get_all_quanto_fxcode_und_pairs(&self) -> FxHashSet<(StaticId, FxCode)> {
         let mut fxcodes = FxHashSet::default();
         for instrument in self.instruments.iter() {
             let codes = instrument.get_quanto_fxcode_und_pair();

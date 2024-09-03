@@ -125,6 +125,10 @@ mod tests {
     use crate::instrument::InstrumentTrait;
     use crate::parameters::discrete_ratio_dividend::DiscreteRatioDividend;
     use crate::{currency::Currency, instruments::futures::Futures};
+    use crate::{
+        InstInfo,
+        InstType,
+    };
     use anyhow::Result;
     use ndarray::Array1;
     use time::macros::datetime;
@@ -182,16 +186,15 @@ mod tests {
             Some(market_datetime),
             Currency::KRW,
             "KSD".to_string(),
-            "KSD".to_string(),
-        )
-        .expect("failed to make a vector data for KSD curve");
+            StaticId::from_str("KSD", "NIL"),
+        ).expect("failed to make a vector data for KSD curve");
 
         let ksd_curve = Rc::new(RefCell::new(
             ZeroCurve::new(
                 evaluation_date.clone(),
                 &ksd_data,
                 String::from("KSD"),
-                String::from("KSD"),
+                StaticId::from_str("KSD", "NIL"),
             )
             .expect("failed to make a zero curve for KSD"),
         ));
@@ -205,18 +208,25 @@ mod tests {
         // make a equity futures with maturity 2024-03-14
         let average_trade_price = 320.0;
         let futures_maturity = datetime!(2024-03-14 13:40:00 +09:00);
+        let issue_date = datetime!(2023-01-15 09:00:00 +09:00);
+        let fut_id = StaticId::from_str("165XXXX", "KRX");
+        let fut_info = InstInfo {
+            id: fut_id,
+            name: "KOSPI2 Fut Mar24".to_string(),
+            inst_type: InstType::Futures,
+            currency: Currency::KRW,
+            maturity: Some(futures_maturity),
+            issue_date: Some(issue_date),
+            accounting_level: crate::AccountingLevel::L1,
+            unit_notional: 250_000.0,
+        };
+        let und_id = StaticId::from_str("KOSPI2", "KRX");
         let futures = Futures::new(
+            fut_info,
             average_trade_price,
-            datetime!(2023-01-15 09:00:00 +09:00),
-            futures_maturity.clone(),gh
-            futures_maturity.clone(),
-            futures_maturity.clone(),
-            250_000.0,
+            None,
             Currency::KRW,
-            Currency::KRW,
-            "KOSPI2".to_string(),
-            "KOSPI2 Fut Mar24".to_string(),
-            "165XXXX".to_string(),
+            und_id,
         );
 
         let pricer = FuturesPricer::new(

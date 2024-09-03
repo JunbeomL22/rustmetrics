@@ -114,8 +114,8 @@ impl InstrumentTrait for VanillaOption {
         Ok(self.strike)
     }
 
-    fn get_quanto_fxcode_und_pair(&self) -> Vec<(StaticId, &FxCode)> {
-        match &self.quanto_fx_code {
+    fn get_quanto_fxcode_und_pair(&self) -> Vec<(StaticId, FxCode)> {
+        match self.quanto_fx_code {
             Some(fx_code) => vec![(self.underlying_ids[0], fx_code)],
             None => vec![],
         }

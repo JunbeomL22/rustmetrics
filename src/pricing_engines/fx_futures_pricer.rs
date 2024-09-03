@@ -8,7 +8,11 @@ use crate::pricing_engines::npv_result::NpvResult;
 use crate::pricing_engines::pricer::PricerTrait;
 //
 use anyhow::{anyhow, Result};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell, 
+    rc::Rc,
+};
+use rustc_hash::FxHashMap;
 
 /// evaluation date is not needed for this pricer
 /// all parameters have the evaluation date (shared in the form of Rc<RefCell<EvaluationDate>>)
@@ -69,7 +73,7 @@ impl PricerTrait for FxFuturesPricer {
         Ok(NpvResult::new_from_npv(npv))
     }
 
-    fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<HashMap<Currency, Real>> {
+    fn fx_exposure(&self, instrument: &Instrument, _npv: Real) -> Result<FxHashMap<Currency, Real>> {
         let average_trade_price = instrument.get_average_trade_price();
         let futures_currency = instrument.get_currency();
         let underlying_currency = instrument.get_underlying_currency()?;
@@ -95,7 +99,7 @@ impl PricerTrait for FxFuturesPricer {
             .borrow()
             .get_discount_factor_at_date(maturity)?;
 
-        let mut res: HashMap<Currency, Real> = HashMap::new();
+        let mut res: FxHashMap<Currency, Real> = FxHashMap::default();
         res.insert(futures_currency, -futures_discount * average_trade_price);
         res.insert(underlying_currency, underlying_discount);
 

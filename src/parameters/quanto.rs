@@ -4,6 +4,7 @@ use crate::parameters::{
     volatilities::constant_volatility::ConstantVolatility, volatility::Volatility,
 };
 use std::{cell::RefCell, rc::Rc};
+use static_id::StaticId;
 
 /// Quanto parameter.
 /// It is assumed that the correlation are constant.
@@ -12,7 +13,7 @@ pub struct Quanto {
     fx_volatility: Rc<RefCell<Volatility>>,
     correlation: Real,
     fx_code: FxCode,
-    underlying_code: String,
+    underlying_id: StaticId,
 }
 
 impl Quanto {
@@ -20,13 +21,13 @@ impl Quanto {
         fx_volatility: Rc<RefCell<Volatility>>,
         correlation: Real,
         fx_code: FxCode,
-        underlying_code: String,
+        underlying_id: StaticId,
     ) -> Quanto {
         Quanto {
             fx_volatility,
             correlation,
             fx_code,
-            underlying_code,
+            underlying_id,
         }
     }
 
@@ -34,8 +35,8 @@ impl Quanto {
         self.fx_volatility.borrow().get_value(t, forward_moneyness) * self.correlation
     }
 
-    pub fn get_underlying_code(&self) -> &String {
-        &self.underlying_code
+    pub fn get_underlying_id(&self) -> StaticId {
+        self.underlying_id
     }
 
     pub fn get_fx_code(&self) -> &FxCode {
@@ -51,7 +52,7 @@ impl Default for Quanto {
             ))),
             correlation: 0.0,
             fx_code: FxCode::default(),
-            underlying_code: "".to_string(),
+            underlying_id: StaticId::default(),
         }
     }
 }

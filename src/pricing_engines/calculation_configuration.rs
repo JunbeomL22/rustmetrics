@@ -1,6 +1,7 @@
 use crate::definitions::{Integer, Real};
 use crate::enums::{StickynessType, VanillaOptionCalculationMethod};
 use crate::parameters::volatilities::volatiltiy_interpolator::VolatilityInterplator;
+use crate::Tenor;
 use anyhow::{anyhow, Result};
 use ndarray::Array1;
 use serde::{Deserialize, Serialize};
@@ -36,9 +37,9 @@ pub struct CalculationConfiguration {
     div_bump_value: Real,
     theta_day: Integer,
     //
-    rho_structure_tenors: Vec<String>,
-    vega_structure_tenors: Vec<String>,
-    div_structure_tenors: Vec<String>,
+    rho_structure_tenors: Vec<Tenor>,
+    vega_structure_tenors: Vec<Tenor>,
+    div_structure_tenors: Vec<Tenor>,
     vega_matrix_spot_moneyness: Array1<Real>,
     //
     vanilla_option_calculation_method: VanillaOptionCalculationMethod,
@@ -64,6 +65,7 @@ impl Default for CalculationConfiguration {
             "20Y".to_string(),
             "30Y".to_string(),
         ];
+        let rho_tenors: Vec<Tenor> = rho_tenors.iter().map(|x| Tenor::new_from_string(x).expect("failed to create tenor")).collect();
         let div_tenors = vec![
             "1M".to_string(),
             "2M".to_string(),
@@ -75,6 +77,7 @@ impl Default for CalculationConfiguration {
             "2Y".to_string(),
             "3Y".to_string(),
         ];
+        let div_tenors: Vec<Tenor> = div_tenors.iter().map(|x| Tenor::new_from_string(x).expect("failed to convert div tenor")).collect();
         let vega_tenors = vec![
             "1M".to_string(),
             "2M".to_string(),
@@ -86,6 +89,7 @@ impl Default for CalculationConfiguration {
             "2Y".to_string(),
             "3Y".to_string(),
         ];
+        let vega_tenors: Vec<Tenor> = vega_tenors.iter().map(|x| Tenor::new_from_string(x).expect("failed to convert vega tenor")).collect();
         let vega_matrix_spot_moneyness = Array1::linspace(0.6, 1.4, 17);
         CalculationConfiguration {
             npv: true,
@@ -145,9 +149,9 @@ impl CalculationConfiguration {
         rho_bump_value: Real,
         div_bump_value: Real,
         //
-        rho_structure_tenors: Vec<String>,
-        vega_structure_tenors: Vec<String>,
-        div_structure_tenors: Vec<String>,
+        rho_structure_tenors: Vec<Tenor>,
+        vega_structure_tenors: Vec<Tenor>,
+        div_structure_tenors: Vec<Tenor>,
         vega_matrix_spot_moneyness: Array1<Real>,
         //
         vanilla_option_calculation_method: VanillaOptionCalculationMethod,
@@ -357,7 +361,7 @@ impl CalculationConfiguration {
 
     pub fn with_rho_structure_tenors(
         mut self,
-        rho_structure_tenors: Vec<String>,
+        rho_structure_tenors: Vec<Tenor>,
     ) -> CalculationConfiguration {
         self.rho_structure_tenors = rho_structure_tenors;
         self
@@ -365,7 +369,7 @@ impl CalculationConfiguration {
 
     pub fn with_vega_structure_tenors(
         mut self,
-        vega_structure_tenors: Vec<String>,
+        vega_structure_tenors: Vec<Tenor>,
     ) -> CalculationConfiguration {
         self.vega_structure_tenors = vega_structure_tenors;
         self
@@ -373,7 +377,7 @@ impl CalculationConfiguration {
 
     pub fn with_div_structure_tenors(
         mut self,
-        div_structure_tenors: Vec<String>,
+        div_structure_tenors: Vec<Tenor>,
     ) -> CalculationConfiguration {
         self.div_structure_tenors = div_structure_tenors;
         self
@@ -407,15 +411,15 @@ impl CalculationConfiguration {
         self.vanilla_option_calculation_method
     }
 
-    pub fn get_div_structure_tenors(&self) -> &Vec<String> {
+    pub fn get_div_structure_tenors(&self) -> &Vec<Tenor> {
         &self.div_structure_tenors
     }
 
-    pub fn get_rho_structure_tenors(&self) -> &Vec<String> {
+    pub fn get_rho_structure_tenors(&self) -> &Vec<Tenor> {
         &self.rho_structure_tenors
     }
 
-    pub fn get_vega_structure_tenors(&self) -> &Vec<String> {
+    pub fn get_vega_structure_tenors(&self) -> &Vec<Tenor> {
         &self.vega_structure_tenors
     }
 
