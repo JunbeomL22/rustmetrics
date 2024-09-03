@@ -146,6 +146,7 @@ pub mod test {
     use std::{cell::RefCell, rc::Rc};
     use time::macros::datetime;
     use static_id::StaticId;
+    use crate::Tenor;
 
     #[test]
     fn test_option_analytic_pricer_npv() -> Result<()> {
@@ -184,6 +185,11 @@ pub mod test {
             String::from("3Y"),
         ];
 
+        let vega_structure_tenors = vega_structure_tenors
+            .iter()
+            .map(|x| Tenor::new_from_string(x).unwrap())
+            .collect::<Vec<Tenor>>();
+        
         let vega_matrix_spot_moneyness = Array1::linspace(0.6, 1.4, 17);
 
         let local_volatility = LocalVolatilitySurface::initialize(

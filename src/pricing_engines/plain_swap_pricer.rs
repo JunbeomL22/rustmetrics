@@ -213,9 +213,7 @@ pub mod tests {
 
     #[test]
     fn test_crs_pricer() -> Result<()> {
-        let fixed_currency = Currency::KRW;
         let floating_currency = Currency::USD;
-        let unit_notional = 1.0;
         let issue_date = datetime!(2024-01-02 16:30:00 +09:00);
         let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(
             issue_date + Duration::days(4),
@@ -398,7 +396,6 @@ pub mod tests {
 
     #[test]
     fn test_irs_pricer() -> Result<()> {
-        let fixed_currency = Currency::KRW;
         let floating_currency = Currency::KRW;
         let unit_notional = 100.0;
         let issue_date = datetime!(2024-01-02 16:30:00 +09:00);

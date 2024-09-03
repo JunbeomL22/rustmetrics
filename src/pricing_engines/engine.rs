@@ -558,7 +558,7 @@ impl Engine {
             .map(|c| c.as_str())
             .collect();
         let all_und_codes = self.instruments.get_all_underlying_ids()
-            .into_iter().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | ");
+            .into_iter().map(|s| s.code_str().to_string()).collect::<Vec<String>>().join(" | ");
             
         self.msg_tag = format!(
             "<ENGINE>\n\
@@ -569,7 +569,7 @@ impl Engine {
             self.engine_id,
             all_types.join(" / "),
             curr_str.join(" / "),
-            all_und_codes.join(" / "),
+            all_und_codes,
         );
 
         let dt = self.evaluation_date.borrow().get_date_clone();
@@ -592,7 +592,7 @@ impl Engine {
                 "(Engine::initialize_instruments) There are instruments with maturity within the evaluation date\n\
                 evaluation date: {:?}\n\
                 {}\n",
-                dt, inst_codes.into_iter().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "),
+                dt, inst_codes.into_iter().map(|s| s.code_str().to_string()).collect::<Vec<String>>().join(" | "),
             );
         }
 
@@ -616,7 +616,7 @@ impl Engine {
                 "\n(Engine::initialize_instruments) There are instruments with a very short maturity (within 6 hours) \n\
                 Note that these products may produce numerical errors.
                 <LIST>\n{}\n{}\n",
-                inst_codes.into_iter().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "),
+                inst_codes.into_iter().map(|s| s.code_str().to_string()).collect::<Vec<String>>().join(" | "),
                 self.msg_tag
             );
         }
@@ -807,7 +807,7 @@ impl Engine {
             let unitamt = inst.get_unit_notional();
             let npv = self
                 .calculation_results
-                .get(inst_code)
+                .get(&inst_code)
                 .ok_or_else(|| {
                     anyhow!(
                         "({}:{}) result is not set in {} ({})",
@@ -832,7 +832,7 @@ impl Engine {
             let delta = npv * DELTA_PNL_UNIT * unitamt;
             let gamma = 0.0;
 
-            (*self.calculation_results.get(inst_code).ok_or_else(|| {
+            (*self.calculation_results.get(&inst_code).ok_or_else(|| {
                 anyhow!(
                     "({}:{}) result is not set in {} ({})",
                     file!(),
@@ -843,7 +843,7 @@ impl Engine {
             })?)
             .borrow_mut()
             .set_single_delta(inst_code, delta);
-            (*self.calculation_results.get(inst_code).ok_or_else(|| {
+            (*self.calculation_results.get(&inst_code).ok_or_else(|| {
                 anyhow!(
                     "({}:{}) result is not set in {} ({})",
                     file!(),
@@ -1183,7 +1183,7 @@ impl Engine {
         let time_calculator = NullCalendar::default();
         let calc_times = calc_tenors
             .iter()
-            .map(|tenor| add_period(&eval_dt, tenor.as_str()))
+            .map(|tenor| tenor.apply(&eval_dt))
             .map(|dt| time_calculator.get_time_difference(&eval_dt, &dt))
             .collect::<Vec<Time>>();
 
@@ -1337,7 +1337,7 @@ impl Engine {
         let time_calculator = NullCalendar::default();
         let calc_times = calc_tenors
             .iter()
-            .map(|tenor| add_period(&eval_dt, tenor.as_str()))
+            .map(|tenor| tenor.apply(&eval_dt))
             .map(|dt| time_calculator.get_time_difference(&eval_dt, &dt))
             .collect::<Vec<Time>>();
 
@@ -1646,7 +1646,8 @@ impl Engine {
             // deduct the cashflow inbetween
             // the scope bound is for borrowing the result
             {
-                let result_borrow = match result.borrow().get_cashflows() {
+                let result_borrow_clone = result.borrow().clone();
+                let cashflows = match result_borrow_clone.get_cashflows().cloned() {
                     Some(r) => r,
                     None => {
                         return Err(anyhow!(
@@ -1658,12 +1659,13 @@ impl Engine {
                 };
 
                 cash_sum = 0.0;
-                for (date, cash) in cashflows.iter() {
+                let cashflows_cloned = cashflows.clone();
+                for (date, cash) in cashflows_cloned.into_iter() {
                     if (original_evaluation_date.date() < date.date())
                         && (date.date() <= bumped_date.date())
                     {
                         cash_sum += cash;
-                        let cash_copied = *cash;
+                        let cash_copied = cash;
                         let msg = flashlog::lazy_string::LazyString::new(move || {
                             format!(
                                 "\n### {} ({}) has a cashflow: {} at {}\n",
@@ -1704,7 +1706,7 @@ impl Engine {
         let time_calculator = NullCalendar::default();
         let calc_dates = calc_tenors
             .iter()
-            .map(|tenor| add_period(&eval_dt, tenor.as_str()))
+            .map(|tenor| tenor.apply(&eval_dt))
             .collect::<Vec<_>>();
         let mut calc_times = Vec::<Time>::new();
         for date in calc_dates.iter() {
@@ -1837,11 +1839,7 @@ impl Engine {
         let calc_dates = calc_tenors
             .iter()
             .map(|tenor| {
-                
-                add_period(
-                    &self.evaluation_date.borrow().get_date_clone(),
-                    tenor.as_str(),
-                )
+                tenor.apply(&self.evaluation_date.borrow().get_date())  
             })
             .collect::<Vec<_>>();
 

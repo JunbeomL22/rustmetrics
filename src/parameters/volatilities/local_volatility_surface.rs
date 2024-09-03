@@ -84,7 +84,7 @@ impl LocalVolatilitySurface {
     pub fn with_market_surface(
         mut self,
         market_implied_volatility_surface: &SurfaceData,
-        vega_structure_tenors: Vec<String>,
+        vega_structure_tenors: Vec<Tenor>,
         vega_matrix_spot_moneyness: Array1<Real>,
     ) -> Result<LocalVolatilitySurface> {
         let given_dates = market_implied_volatility_surface.get_dates();
@@ -159,7 +159,7 @@ impl LocalVolatilitySurface {
 
         self.imvol_maturity_dates = vega_structure_tenors
             .iter()
-            .map(|tenor| add_period(&eval_date, tenor))
+            .map(|tenor| tenor.apply(&eval_date))
             .collect::<Vec<OffsetDateTime>>();
 
         if !self.imvol_maturity_dates.windows(2).all(|w| w[0] <= w[1]) {
@@ -178,7 +178,10 @@ impl LocalVolatilitySurface {
         let mut tv = Vec::new();
         for tenor in vega_structure_tenors.iter() {
             tv.push(
-                time_calculator.get_time_difference(&eval_date, &add_period(&eval_date, tenor)),
+                time_calculator.get_time_difference(
+                    &eval_date,
+                    &tenor.apply(&eval_date),
+                )
             );
         }
         // sanity check if the time vector is sorted
@@ -222,7 +225,7 @@ impl LocalVolatilitySurface {
         let eval_date = self.evaluation_date.borrow().get_date_clone();
         let dates = vega_structure_tenors
             .iter()
-            .map(|tenor| add_period(&eval_date, tenor))
+            .map(|tenor| tenor.apply(&eval_date))
             .collect::<Vec<OffsetDateTime>>();
 
         let time_calculator = NullCalendar::new();
@@ -549,8 +552,8 @@ mod tests {
 
         let vega_structure_tenors = vec!["1M", "2M", "3M", "6M", "9M", "1Y", "1Y6M", "2Y", "3Y"]
             .iter()
-            .map(|tenor| tenor.to_string())
-            .collect::<Vec<String>>();
+            .map(|tenor| Tenor::new_from_string(tenor).expect("Failed to create Tenor"))
+            .collect::<Vec<Tenor>>();
 
         let time_calculator = NullCalendar::new();
         let dates = surface_data.get_dates();
