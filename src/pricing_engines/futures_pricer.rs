@@ -128,6 +128,7 @@ mod tests {
     use anyhow::Result;
     use ndarray::Array1;
     use time::macros::datetime;
+    use static_id::StaticId;
 
     #[test]
     fn test_futures_engine() -> Result<()> {
@@ -148,16 +149,15 @@ mod tests {
             Some(market_datetime),
             Currency::KRW,
             "KOSPI2".to_string(),
-            "KOSPI2".to_string(),
-        )
-        .expect("failed to make a vector data for dividend ratio");
+            StaticId::from_str("KOSPI2", "KRX"),
+        ).expect("failed to make a vector data for dividend ratio");
 
         let dividend = DiscreteRatioDividend::new(
             evaluation_date.clone(),
             &dividend_data,
             spot,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )
         .expect("failed to make a discrete ratio dividend");
 
@@ -168,7 +168,7 @@ mod tests {
             Some(Rc::new(RefCell::new(dividend))),
             Currency::KRW,
             name.to_string(),
-            name.to_string(),
+            StaticId::from_str(name, "KRX"),
         )));
 
         // make a zero curve which represents KSD curve which is equivelantly KRWGOV - 5bp
@@ -208,7 +208,7 @@ mod tests {
         let futures = Futures::new(
             average_trade_price,
             datetime!(2023-01-15 09:00:00 +09:00),
-            futures_maturity.clone(),
+            futures_maturity.clone(),gh
             futures_maturity.clone(),
             futures_maturity.clone(),
             250_000.0,

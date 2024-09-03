@@ -9,6 +9,7 @@ use crate::pricing_engines::{npv_result::NpvResult, pricer::PricerTrait};
 use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use time::OffsetDateTime;
+use rustc_hash::FxHashMap;
 
 pub struct PlainSwapPricer {
     evaluation_date: Rc<RefCell<EvaluationDate>>,
@@ -171,7 +172,7 @@ impl PricerTrait for PlainSwapPricer {
         let floating_currency = instrument.get_floating_leg_currency()?;
         let fixed_amount = fixed_res * instrument.get_unit_notional();
         let floating_amount = floating_res * instrument.get_unit_notional();
-        let mut res: HashMap<Currency, Real> = HashMap::new();
+        let mut res: FxHashMap<Currency, Real> = FxHashMap::default();
 
         res.entry(fixed_currency)
             .and_modify(|v| *v += fixed_amount)
