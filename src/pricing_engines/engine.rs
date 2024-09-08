@@ -27,7 +27,6 @@ use crate::pricing_engines::{
 };
 use crate::time::{calendar_trait::CalendarTrait, calendars::nullcalendar::NullCalendar};
 use crate::util::format_duration;
-use crate::InstInfo;
 //
 use anyhow::{anyhow, bail, Context, Result};
 use ndarray::Array2;
@@ -41,7 +40,7 @@ use rustc_hash::{
     FxHashSet,
 };
 use time::{Duration, OffsetDateTime};
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use flashlog;
 
 /// Engine typically handles a bunch of instruments and calculate the pricing of the instruments.
@@ -177,8 +176,10 @@ impl Engine {
                     data.name.clone(),
                     curve_id,
                 )?));
-                zero_curves.insert(curve_id.clone(), zero_curve.clone());
+                zero_curves.insert(curve_id, zero_curve.clone());
             } else {
+                //let dummy_curve = Rc::new(RefCell::new(ZeroCurve::new_dummy(self.evaluation_date.clone())));
+                //zero_curves.insert(curve_id, dummy_curve.clone());
                 bail!(
                     "({}:{}) failed to get curve data for {}",
                     file!(),
@@ -187,6 +188,7 @@ impl Engine {
                 );
             }
         }
+        
         // dividend data
         let mut no_dividend_data_msg = format!(
             "missing dividend data list (engine-id: {})\n",
@@ -215,7 +217,7 @@ impl Engine {
                         data,
                         spot,
                         data.name.clone(),
-                        underlying_id.clone(),
+                        underlying_id,
                     )
                     .with_context(|| {
                         anyhow!(
@@ -226,9 +228,9 @@ impl Engine {
                         )
                     })?,
                 )));
-                dividends.insert(underlying_id.clone(), dividend.clone());
+                dividends.insert(underlying_id, dividend.clone());
             } else {
-                no_dividends.push(underlying_id.clone());
+                no_dividends.push(underlying_id);
             }
         }
         if !no_dividends.is_empty() {
@@ -246,22 +248,23 @@ impl Engine {
         // borrowing curve parameter
         let all_underlying_ids = self.instruments.get_all_underlying_ids();
         for und_code in all_underlying_ids {
-            //if curve_data.contains_key(und_code) {
-            if let Some(data) = curve_data.get(&und_code) {
-                let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
-                    self.evaluation_date.clone(),
-                    data,
-                    data.name.clone(),
-                    und_code,
-                )?));
-                zero_curves.insert(und_code.clone(), zero_curve.clone());
-            } else {
-                bail!(
-                    "({}:{}) failed to get borrowing curve data for {}",
-                    file!(),
-                    line!(),
-                    und_code
-                );
+            if let Some(borrowing_curve_id) = self.match_parameter.get_borrowing_curve_map().get(&und_code) {
+                if let Some(data) = curve_data.get(borrowing_curve_id) {
+                    let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
+                        self.evaluation_date.clone(),
+                        data,
+                        data.name.clone(),
+                        und_code,
+                    )?));
+                    zero_curves.insert(und_code, zero_curve.clone());
+                } else {
+                    bail!(
+                        "({}:{}) failed to get borrowing curve data for {}",
+                        file!(),
+                        line!(),
+                        und_code
+                    );
+                }
             }
         }
         //
@@ -280,11 +283,11 @@ impl Engine {
                     data.get_value(),
                     self.evaluation_date.borrow().get_date_clone(),
                     div,
-                    *data.get_currency(),
+                    data.get_currency(),
                     data.get_name().clone(),
-                    underlying_id.clone(),
+                    underlying_id,
                 )));
-                equities.insert(underlying_id.clone(), rc);
+                equities.insert(underlying_id, rc);
             } else {
                 bail!(
                     "({}:{}) failed to get stock data for {}",
@@ -334,10 +337,16 @@ impl Engine {
                         file!(), line!(), und_code))?;
                 let borrowing_curve = zero_curves.get(borrowing_curve_map)
                     .with_context(|| anyhow!(
-                        "({}:{}) failed to get borrowing curve for {} in creating volatility surface\n\
-                        zero curves list:\n {:?}",
-                        file!(), line!(), und_code,
-                        zero_curves.keys().map(|s| s.code_str()).collect::<Vec<&str>>().join(" | "),
+                        "({}:{})\n\
+                        engine-tag: {}\n\
+                        failed to get borrowing curve for {} in creating volatility surface\n\
+                        zero curves list: {:?}\n\
+                        borrowing curve key: {:?}",
+                        file!(), line!(), 
+                        self.msg_tag,
+                        und_code,
+                        zero_curves.keys().map(|s| s.to_string()).collect::<Vec<String>>().join(" | "),
+                        borrowing_curve_map,
                     ))?.clone();
                 let stickyness = self.calculation_configuration.get_stickyness_type();
                 let lv_interpolator = self.calculation_configuration.get_lv_interpolator();
@@ -358,7 +367,7 @@ impl Engine {
                 )?;
                 lv.build()?;
                 let rc = Rc::new(RefCell::new(Volatility::LocalVolatilitySurface(lv)));
-                volatilities.insert(und_code.clone(), rc);
+                volatilities.insert(und_code, rc);
             } else if equity_volatility_surface_data.contains_key(&und_code) {
                 let data = equity_volatility_surface_data.get(&und_code).unwrap();
                 let vega_matrix_spot_moneyness = self
@@ -406,7 +415,7 @@ impl Engine {
                     stickyness,
                     lv_interpolator,
                     data.name.clone(),
-                    und_code.clone(),
+                    und_code,
                 )
                 .with_market_surface(
                     data,
@@ -415,7 +424,7 @@ impl Engine {
                 )?;
                 lv.build()?;
                 let rc = Rc::new(RefCell::new(Volatility::LocalVolatilitySurface(lv)));
-                volatilities.insert(und_code.clone(), rc);
+                volatilities.insert(und_code, rc);
             } else {
                 bail!(
                     "({}:{}) failed to get equity volatility data for {}",
@@ -458,11 +467,8 @@ impl Engine {
         // quanto parameter
         let mut quantos = FxHashMap::default();
         for (und_code, fxcode) in quanto_fx_und_pair {
-            //if quanto_correlation_data.contains_key(&(und_code.clone(), *fxcode)) {
+            //if quanto_correlation_data.contains_key(&(und_code, *fxcode)) {
             if let Some(data) = quanto_correlation_data.get(&(und_code, fxcode)) {
-                let data = quanto_correlation_data
-                    .get(&(und_code, fxcode))
-                    .unwrap();
                 let rc = Rc::new(RefCell::new(
                     Quanto::new(
                         fx_volatilities.get(&fxcode)
@@ -496,7 +502,7 @@ impl Engine {
                 )
             })?;
             let rc = Rc::new(daily_close);
-            past_daily_close_prices.insert(key.clone(), rc);
+            past_daily_close_prices.insert(*key, rc);
         }
 
         self.fxs = fxs;
@@ -661,7 +667,7 @@ impl Engine {
                     self.msg_tag,
                 )
             })?;
-            self.pricers.insert(inst.get_id().clone(), pricer);
+            self.pricers.insert(inst.get_id(), pricer);
         }
         Ok(())
     }
@@ -687,15 +693,17 @@ impl Engine {
 
             let npv = pricer.npv(inst).with_context(|| {
                 anyhow!(
-                    "({}:{}) <Egnine::get_npvs> failed to get npv for {}\n{}",
+                    "({}:{}) <Egnine::get_npvs> failed to get npv for {}\n{}\n\
+                    inst: {:?}",
                     file!(),
                     line!(),
                     inst_code,
-                    self.msg_tag
+                    self.msg_tag,
+                    &inst
                 )
             })?;
 
-            npvs.insert(inst_code.clone(), npv);
+            npvs.insert(inst_code, npv);
         }
         Ok(npvs)
     }
@@ -715,7 +723,7 @@ impl Engine {
             })?;
 
             let npv = pricer.npv_result(inst)?;
-            npvs.insert(inst.get_id().clone(), npv);
+            npvs.insert(inst.get_id(), npv);
         }
         Ok(npvs)
     }
@@ -1224,7 +1232,7 @@ impl Engine {
             let mut prev_npvs_up: FxHashMap<StaticId, Real> = FxHashMap::default();
             for inst_code in inst_codes_in_action.iter() {
                 prev_npvs_up.insert(
-                    inst_code.clone(),
+                    *inst_code,
                     self.calculation_results
                         .get(inst_code)
                         .ok_or_else(|| {
@@ -1376,14 +1384,14 @@ impl Engine {
 
             for inst_code in inst_codes_in_action.iter() {
                 let init = Array2::zeros((calc_times.len(), spot_moneyness.len()));
-                single_vega_matrix.insert(inst_code.clone(), init);
+                single_vega_matrix.insert(*inst_code, init);
             }
 
             let mut prev_npvs_up: FxHashMap<StaticId, Real> = FxHashMap::default();
 
             for inst_code in inst_codes_in_action.iter() {
                 prev_npvs_up.insert(
-                    inst_code.clone(),
+                    *inst_code,
                     self.calculation_results
                         .get(inst_code)
                         .ok_or_else(|| {
@@ -1521,13 +1529,9 @@ impl Engine {
             }
             // bump dividend but limit the scope that is mutably borrowed
             {
-                self.dividends
-                    .get(&div_code)
-                    .unwrap()
-                    .clone()
-                    .unwrap()
-                    .borrow_mut()
-                    .bump_date_interval(None, None, bump_val)?;
+                if let Some(div) = self.dividends.get(&div_code) {
+                    div.clone().unwrap().borrow_mut().bump_date_interval(None, None, bump_val)?;
+                }
             }
 
             npvs_up = self.get_npvs().context("failed to get npvs")?; // instrument code (StaticId) -> npv (Real
@@ -1558,13 +1562,9 @@ impl Engine {
             }
             // put back the bump
             {
-                self.dividends
-                    .get(&div_code)
-                    .unwrap()
-                    .clone()
-                    .unwrap()
-                    .borrow_mut()
-                    .bump_date_interval(None, None, -bump_val)?;
+                if let Some(div) = self.dividends.get(&div_code) {
+                    div.clone().unwrap().borrow_mut().bump_date_interval(None, None, -bump_val)?;
+                }
             }
         }
         Ok(())
@@ -1839,7 +1839,7 @@ impl Engine {
         let calc_dates = calc_tenors
             .iter()
             .map(|tenor| {
-                tenor.apply(&self.evaluation_date.borrow().get_date())  
+                tenor.apply(self.evaluation_date.borrow().get_date())  
             })
             .collect::<Vec<_>>();
 
@@ -1882,13 +1882,9 @@ impl Engine {
                 };
                 let bump_end = Some(&calc_dates[i]);
                 {
-                    self.dividends
-                        .get(div_code)
-                        .unwrap()
-                        .clone()
-                        .unwrap()
-                        .borrow_mut()
-                        .bump_date_interval(bump_start, bump_end, bump_val)?;
+                    if let Some(div) = self.dividends.get(div_code) {
+                        div.clone().unwrap().borrow_mut().bump_date_interval(bump_start, bump_end, bump_val)?;
+                    }
                 }
 
                 //
@@ -1910,13 +1906,9 @@ impl Engine {
                 }
 
                 {
-                    self.dividends
-                        .get(div_code)
-                        .unwrap()
-                        .clone()
-                        .unwrap()
-                        .borrow_mut()
-                        .bump_date_interval(bump_start, bump_end, -bump_val)?;
+                    if let Some(div) = self.dividends.get(div_code) {
+                        div.clone().unwrap().borrow_mut().bump_date_interval(bump_start, bump_end, -bump_val)?;
+                    }
                 }
 
                 // if there is no instrument over the calc_tenors, we do not need to calculate the next bump
@@ -2213,7 +2205,7 @@ impl Engine {
     pub fn get_calculation_result_clone(&self) -> FxHashMap<StaticId, CalculationResult> {
         let mut result = FxHashMap::default();
         for (key, value) in self.calculation_results.iter() {
-            result.insert(key.clone(), value.borrow().clone());
+            result.insert(*key, value.borrow().clone());
         }
         result
     }

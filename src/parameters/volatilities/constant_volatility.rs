@@ -2,7 +2,7 @@ use crate::definitions::{Real, Time};
 use crate::parameters::volatility::VolatilityTrait;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 //
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstantVolatility {

@@ -10,7 +10,8 @@ use crate::time::{
     jointcalendar::JointCalendar,
 };
 use crate::InstInfo;
-use static_id::StaticId;
+use crate::Tenor;
+use static_id::static_id::StaticId;
 //
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -41,7 +42,7 @@ pub struct Bond {
     pub schedule: Schedule,
     pub floating_coupon_spread: Option<Real>,
     pub rate_index: Option<RateIndex>,
-    pub floating_compound_tenor: Option<String>,
+    pub floating_compound_tenor: Option<Tenor>,
     pub fixed_coupon_rate: Option<Real>,
     //
     pub effective_date: OffsetDateTime,
@@ -63,7 +64,7 @@ impl Default for Bond {
             inst_info: InstInfo::default(),
             bond_info: BondInfo {
                 issuer_type: IssuerType::Undefined,
-                credit_rating: CreditRating::Undefined,
+                credit_rating: CreditRating::None,
                 issuer_id: StaticId::default(),
                 rank: RankType::Undefined,
             },
@@ -102,7 +103,7 @@ impl Bond {
         schedule: Schedule,
         floating_coupon_spread: Option<Real>,
         rate_index: Option<RateIndex>,
-        floating_compound_tenor: Option<String>,
+        floating_compound_tenor: Option<Tenor>,
         fixed_coupon_rate: Option<Real>,
         //
         effective_date: Option<OffsetDateTime>,
@@ -217,7 +218,7 @@ impl Bond {
         fixed_coupon_rate: Option<Real>,
         floating_coupon_spread: Option<Real>,
         rate_index: Option<RateIndex>,
-        floating_compound_tenor: Option<String>,
+        floating_compound_tenor: Option<Tenor>,
         //
         calendar: JointCalendar,
         //
@@ -299,6 +300,10 @@ impl Bond {
 
     pub fn set_pricing_date(&mut self, pricing_date: OffsetDateTime) {
         self.pricing_date = Some(pricing_date);
+    }
+
+    pub fn set_inst_info(&mut self, inst_info: InstInfo) {
+        self.inst_info = inst_info;
     }
 }
 

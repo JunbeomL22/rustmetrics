@@ -14,7 +14,7 @@ use crate::pricing_engines::{
     pricer::Pricer, unit_pricer::UnitPricer,
 };
 //
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use std::{cell::RefCell, rc::Rc};
 use rustc_hash::FxHashMap;
 
@@ -93,11 +93,12 @@ impl PricerFactory {
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "{}:{} (PricerFactory::get_bond_pricer)\n\
-                    failed to get discount curve of {}. self.zero_curves does not have {:?}",
+                    failed to get discount curve of {}. self.zero_curves ({:?}) does not have {:?}",
                     file!(),
                     line!(),
                     instrument.get_id(),
-                    discount_curve_id.get_id(),
+                    self.zero_curves.keys(),
+                    discount_curve_id,
                 )
             })?
             .clone();
@@ -240,7 +241,7 @@ impl PricerFactory {
         let quanto = match und_curr == curr {
             false => {
                 let fx_code = FxCode::new(und_curr, curr);
-                let underlying_code = instrument.get_underlying_ids()[0].clone();
+                let underlying_code = instrument.get_underlying_ids()[0];
                 let key = (underlying_code, fx_code);
                 let quanto =
                     self.quantos

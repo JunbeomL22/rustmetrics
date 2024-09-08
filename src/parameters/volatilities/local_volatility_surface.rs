@@ -13,13 +13,12 @@ use crate::parameters::{
 use crate::Tenor;
 use crate::time::calendar_trait::CalendarTrait;
 use crate::time::calendars::nullcalendar::NullCalendar;
-use crate::utils::string_arithmetic::add_period;
 use anyhow::{anyhow, Context, Result};
 use std::{cell::RefCell, rc::Rc};
 //
 use ndarray::{Array1, Array2};
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 #[derive(Clone, Debug)]
 pub struct LocalVolatilitySurface {
@@ -491,13 +490,11 @@ impl VolatilityTrait for LocalVolatilitySurface {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::currency::{self, Currency};
+    use crate::currency::Currency;
     use crate::data::{surface_data::SurfaceData, vector_data::VectorData};
     use crate::parameters::volatilities::volatiltiy_interpolator::{
         AndreasenHuge, VolatilityInterplator,
     };
-    use crate::utils;
-    use crate::data;
     use crate::definitions::{Real, Time};
     use crate::enums::StickynessType;
     use crate::evaluation_date::EvaluationDate;
@@ -519,11 +516,11 @@ mod tests {
             None,
             Currency::KRW,
             "KOSPI2".to_string(),
-            static_id::StaticId::from_str("KOSPI2", "KRX"),
+            static_id::static_id::StaticId::from_str("KOSPI2", "KRX"),
         )));
         let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_date.clone())));
 
-        let dummy_data = VectorData::test_curve_data(0.02, Currency::KRW)?;
+        let dummy_data = VectorData::test_curve_data(0.00, Currency::KRW)?;
         let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(
             evaluation_date.clone(),
             &dummy_data,
@@ -532,13 +529,13 @@ mod tests {
         )?));
 
         let surface_data = SurfaceData::test_data(
-            0.0,
-            Some(datetime!(2024-01-02 15:40:00 +09:00)),
+            spot,
+            Some(eval_date.clone()),
         )?;
 
         //println!("vector_data: {:?}", dummy_data);
         //println!("surface_data: {:?}", surface_data);
-        let vol_id = static_id::StaticId::from_str("local vol", "KRX");
+        let vol_id = static_id::static_id::StaticId::from_str("local vol", "KRX");
         let mut local_volatility_surface = LocalVolatilitySurface::initialize(
             evaluation_date.clone(),
             equity.clone(),
@@ -550,10 +547,17 @@ mod tests {
             vol_id,
         );
 
-        let vega_structure_tenors = vec!["1M", "2M", "3M", "6M", "9M", "1Y", "1Y6M", "2Y", "3Y"]
-            .iter()
-            .map(|tenor| Tenor::new_from_string(tenor).expect("Failed to create Tenor"))
-            .collect::<Vec<Tenor>>();
+        let vega_structure_tenors = vec![
+            crate::Tenor::new_from_string("1M")?,
+            crate::Tenor::new_from_string("2M")?,
+            crate::Tenor::new_from_string("3M")?,
+            crate::Tenor::new_from_string("6M")?,
+            crate::Tenor::new_from_string("9M")?,
+            crate::Tenor::new_from_string("1Y")?,
+            crate::Tenor::new_from_string("1Y6M")?,
+            crate::Tenor::new_from_string("2Y")?,
+            crate::Tenor::new_from_string("3Y")?,
+        ];
 
         let time_calculator = NullCalendar::new();
         let dates = surface_data.get_dates();
@@ -572,13 +576,12 @@ mod tests {
         )?;
 
         local_volatility_surface.build()?;
-
+        //dbg!(&local_volatility_surface);
         let mut calc_vol = Array2::zeros((times.len(), vega_spot_moneyness.len()));
 
         for i in 0..times.len() {
             for j in 0..vega_spot_moneyness.len() {
-                calc_vol[[i, j]] =
-                    local_volatility_surface.get_value(times[i], vega_spot_moneyness[j]);
+                calc_vol[[i, j]] = local_volatility_surface.get_value(times[i], vega_spot_moneyness[j]);
             }
         }
 
@@ -593,15 +596,15 @@ mod tests {
 
         assert!(max_error < 1.0e-6, "max error: {}", max_error);
 
-        println!(
-            "local_volatility_surface.get_value(2.5, 0.65): {}",
-            local_volatility_surface.get_value(2.5, 0.65)
-        );
+        //println!(
+        //    "local_volatility_surface.get_value(2.5, 0.65): {}",
+        //    local_volatility_surface.get_value(2.5, 0.65)
+        //);
         local_volatility_surface.bump_volatility(Some(2.0), None, None, None, 0.01)?;
-        println!(
-            "after tail bump local_volatility_surface.get_value(2.5, 0.65): {}",
-            local_volatility_surface.get_value(2.5, 0.65)
-        );
+        //println!(
+        //    "after tail bump local_volatility_surface.get_value(2.5, 0.65): {}",
+        //    local_volatility_surface.get_value(2.5, 0.65)
+        //);
         let mut bumped_calc_vol1 = Array2::zeros((times.len(), vega_spot_moneyness.len()));
 
         for i in 0..times.len() {
@@ -613,10 +616,10 @@ mod tests {
 
         local_volatility_surface.bump_volatility(Some(1.5), Some(2.0), None, Some(0.7), 0.01)?;
 
-        println!(
-            "after tail bump local_volatility_surface.get_value(2.5, 0.65): {}",
-            local_volatility_surface.get_value(2.5, 0.65)
-        );
+        //println!(
+        //    "after tail bump local_volatility_surface.get_value(2.5, 0.65): {}",
+        //    local_volatility_surface.get_value(2.5, 0.65)
+        //);
         let mut bumped_calc_vol2 = Array2::zeros((times.len(), vega_spot_moneyness.len()));
         for i in 0..times.len() {
             for j in 0..vega_spot_moneyness.len() {

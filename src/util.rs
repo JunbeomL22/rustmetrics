@@ -15,7 +15,7 @@ pub fn min_offsetdatetime(d1: &OffsetDateTime, d2: &OffsetDateTime) -> OffsetDat
 ///
 /// # Examples
 /// ```
-/// use quantlib::util::type_name;
+/// use rustmetrics::util::type_name;
 /// let x: i32 = 5;
 /// assert_eq!(type_name(&x), "i32");
 /// let s: String = "hello".to_string();

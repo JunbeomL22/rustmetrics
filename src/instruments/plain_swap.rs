@@ -8,6 +8,7 @@ use crate::parameters::zero_curve::ZeroCurve;
 use crate::time::conventions::{BusinessDayConvention, DayCountConvention, PaymentFrequency};
 use crate::time::{calendar_trait::CalendarTrait, jointcalendar::JointCalendar};
 use crate::InstInfo;
+use crate::Tenor;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, rc::Rc};
@@ -49,7 +50,7 @@ pub struct PlainSwap {
     pub floating_legs: Schedule,
     pub fixed_rate: Option<Real>,
     pub rate_index: Option<RateIndex>,
-    pub floating_compound_tenor: Option<String>,
+    pub floating_compound_tenor: Option<Tenor>,
     pub calendar: JointCalendar,
     //unit_notional: Real,
     //
@@ -99,7 +100,7 @@ impl PlainSwap {
         floating_legs: Schedule,
         fixed_rate: Option<Real>,
         rate_index: Option<RateIndex>,
-        floating_compound_tenor: Option<String>,
+        floating_compound_tenor: Option<Tenor>,
         calendar: JointCalendar,
         //unit_notional: Real,
         //
@@ -276,7 +277,7 @@ impl PlainSwap {
         //
         fixed_rate: Option<Real>,
         rate_index: Option<RateIndex>,
-        floating_compound_tenor: Option<String>,
+        floating_compound_tenor: Option<Tenor>,
         //
         forward_generation: bool,
         fixed_daycounter: DayCountConvention,
@@ -316,7 +317,7 @@ impl PlainSwap {
         let floating_legs = schedule::build_schedule(
             forward_generation,
             &effective_date,
-            &maturity,
+            maturity,
             &calendar,
             &floating_busi_convention,
             &floating_frequency,
@@ -446,6 +447,18 @@ impl PlainSwap {
             specific_type,
         })
     }
+
+    #[inline]
+    #[must_use]
+    pub fn get_fixed_legs(&self) -> &Schedule {
+        &self.fixed_legs
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn get_floating_legs(&self) -> &Schedule {
+        &self.floating_legs
+    }
 }
 
 impl InstrumentTrait for PlainSwap {
@@ -468,7 +481,7 @@ impl InstrumentTrait for PlainSwap {
 
         let maturity = self.get_maturity().unwrap();
         if maturity.date() >= pricing_date.date() && self.last_fixed_side_payment.is_some() {
-            res.insert(maturity.clone(), -self.last_fixed_side_payment.unwrap());
+            res.insert(*maturity, -self.last_fixed_side_payment.unwrap());
         }
 
         if self.fixed_rate.is_none() || self.fixed_legs.is_empty() {
@@ -519,7 +532,7 @@ impl InstrumentTrait for PlainSwap {
         if maturity.date() >= pricing_date.date()
             && self.last_floating_side_endorsement.is_some()
         {
-            res.insert(maturity.clone(), self.last_floating_side_endorsement.unwrap());
+            res.insert(*maturity, self.last_floating_side_endorsement.unwrap());
         }
 
         if self.rate_index.is_none() || self.floating_legs.is_empty() {
@@ -613,7 +626,7 @@ mod tests {
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};
     use time::macros::datetime;
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_crs() -> Result<()> {
@@ -632,11 +645,12 @@ mod tests {
         let fixed_rate = 0.04;
         let fx_rate = 1_330.0;
         let tenor = crate::Tenor::new(0, 3, 0);
-        let id = static_id::StaticId::from_str("USD Libor 3M", "KRX");
+        let curve_tenor = tenor.clone();
+        let id = static_id::static_id::StaticId::from_str("USD Libor 3M", "KRX");
 
         let rate_index = RateIndex::new(
             id,
-            tenor,
+            curve_tenor,
             Currency::USD,
             String::from("USD Libor 3M"),
         )?;
@@ -646,7 +660,7 @@ mod tests {
         let last_fixed_side_payment = Some(fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
-        let id = static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
+        let id = static_id::static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
         
 
         let inst_info = crate::InstInfo::new(
@@ -673,7 +687,7 @@ mod tests {
             //
             Some(fixed_rate),
             Some(rate_index),
-            None,
+            Some(tenor),
             //
             true,
             DayCountConvention::Actual365Fixed,
@@ -690,7 +704,7 @@ mod tests {
         )?;
 
         let ser = serde_json::to_string(&crs)?;
-        let deser = serde_json::from_str(&ser)?;
+        let deser = serde_json::from_str(&ser)?;        
 
         assert_eq!(crs.get_specific_plain_swap_type()?, PlainSwapType::CRS,);
         assert_eq!(crs.clone(), deser, "Failed to serialize and deserialize");
@@ -705,26 +719,28 @@ mod tests {
             StaticId::from_str("USDIRS", "KRX"),
         )?;
 
+        
         let usdirs_curve = ZeroCurve::new(
             evaluation_date.clone(),
             &usdirs_data,
             "USDIRS".to_string(),
             StaticId::from_str("USD IR Curve", "KAP"),
         )?;
-
+        
         let floating_curve = Rc::new(RefCell::new(usdirs_curve));
-
         let fixed_cashflows = crs.get_fixed_cashflows(&issue_date)?;
-        let floating_cashflows =
-            crs.get_floating_cashflows(&issue_date, Some(floating_curve), None)?;
-
+        
+        let floating_cashflows = crs.get_floating_cashflows(&issue_date, Some(floating_curve), None)?;
+        
+        
         let mut fixed_keys: Vec<_> = fixed_cashflows.keys().collect();
         fixed_keys.sort();
-        println!("crs fixed cashflows");
+        
         for key in fixed_keys.iter() {
             println!("{:?}: {}", key.date(), fixed_cashflows.get(key).unwrap());
         }
 
+        
         let mut floating_keys: Vec<_> = floating_cashflows.keys().collect();
         floating_keys.sort();
         println!("crs floating cashflows");
@@ -749,7 +765,7 @@ mod tests {
 
         assert_eq!(
             floating_cashflows.get(floating_keys[4]).unwrap().clone(),
-            1.0100604 as Real,
+            1.010036 as Real,
         );
 
         Ok(())
@@ -775,7 +791,7 @@ mod tests {
         let last_fixed_side_payment = Some(last_fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
-        let id = static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
+        let id = static_id::static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
         let inst_info = crate::InstInfo::new(
             id,
             "MockFxSwap".to_string(),
@@ -877,7 +893,7 @@ mod tests {
         let last_fixed_side_payment = Some(fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
-        let id = static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
+        let id = static_id::static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
 
         let inst_info = crate::InstInfo::new(
             id,

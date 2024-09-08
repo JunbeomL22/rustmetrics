@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 pub const EASTER_MONDAYS: [[u16; 299]; 2] = [
-    // taken https://github.com/lballabio/QuantLib/blob/master/ql/time/calendar.cpp
+    // taken https://github.com/lballabio/rustmetrics/blob/master/ql/time/calendar.cpp
 
     // WESTERN EASTER MONDAYS
     [

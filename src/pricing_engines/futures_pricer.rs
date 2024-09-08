@@ -106,7 +106,7 @@ impl PricerTrait for FuturesPricer {
                 let unit_notional = futures.get_unit_notional();
                 let exposure = (npv - average_trade_price) * unit_notional;
                 let currency = futures.get_currency();
-                let res: FxHashMap<Currency, Real> = [(currency.clone(), exposure)].iter().cloned().collect();
+                let res: FxHashMap<Currency, Real> = [(currency, exposure)].iter().cloned().collect();
                 Ok(res)
             }
             _ => Err(anyhow!(
@@ -132,7 +132,7 @@ mod tests {
     use anyhow::Result;
     use ndarray::Array1;
     use time::macros::datetime;
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_futures_engine() -> Result<()> {

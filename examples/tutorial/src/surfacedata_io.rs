@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use ndarray::{array, Array1, Array2};
-use quantlib::currency::Currency;
-use quantlib::data::surface_data::SurfaceData;
-use quantlib::definitions::Real;
-use quantlib::utils::string_arithmetic::add_period;
+use rustmetrics::currency::Currency;
+use rustmetrics::data::surface_data::SurfaceData;
+use rustmetrics::definitions::Real;
+use rustmetrics::utils::string_arithmetic::add_period;
 use serde_json::{from_str, to_string_pretty};
 use std::fs::write;
 use time::{macros::datetime, Duration};

@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 /// value: Real, market_datetime: OffsetDateTime, name: String
 /// The examples are flat volatility, constant continuous dividend yield
@@ -57,8 +57,8 @@ impl ValueData {
         &self.name
     }
 
-    pub fn get_currency(&self) -> &Currency {
-        &self.currency
+    pub fn get_currency(&self) -> Currency {
+        self.currency
     }
 }
 
@@ -67,7 +67,7 @@ mod tests {
     use crate::currency::Currency;
     use crate::data::value_data::ValueData;
     use anyhow::Result;
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_creation() -> Result<()> {

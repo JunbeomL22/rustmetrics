@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 use std::rc::Rc;
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use flashlog::{
     log_debug,
     lazy_string::LazyString,
@@ -102,8 +102,8 @@ impl MarketPrice {
                 for (date, div) in div_ratio.into_iter() {
                     if (date > self.market_datetime) && (date <= eval_dt) {
                         self.value *= 1.0 - div;
-                        let date_clone = date.clone();
-                        let eval_dt_clone = eval_dt.clone();
+                        let date_clone = date;
+                        let eval_dt_clone = eval_dt;
                         let name = self.name.clone();
                         let id = self.id;
                         let value = self.value;
@@ -125,8 +125,8 @@ impl MarketPrice {
                 for (date, div) in div_ratio.into_iter() {
                     if (date > eval_dt) && (date <= self.market_datetime) {
                         self.value /= 1.0 - div;
-                        let date_clone = date.clone();
-                        let eval_dt_clone = eval_dt.clone();
+                        let date_clone = date;
+                        let eval_dt_clone = eval_dt;
                         let name_str = self.name.clone();
                         let id = self.id;
                         let value = self.value;

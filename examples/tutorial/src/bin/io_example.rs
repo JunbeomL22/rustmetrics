@@ -3,7 +3,7 @@ use examples_toymodel::{
     futuresdata_io::futuresdata_io, surfacedata_io::surfacedata_io, valuedata_io::valuedata_io,
     vectordata_io::vectordata_io,
 };
-use quantlib::utils::tracing_timer::CustomOffsetTime;
+use rustmetrics::utils::tracing_timer::CustomOffsetTime;
 use std::time::SystemTime;
 use tracing::{info, span, Level};
 use tracing_appender::{non_blocking, rolling};

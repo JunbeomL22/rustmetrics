@@ -27,8 +27,6 @@ pub use crate::instruments::{
     AccountingLevel,
 };
 
-pub use crate::currency::Currency;
-
 pub use crate::utils::string_arithmetic::{
     add_period,
     sub_period,
@@ -41,4 +39,18 @@ pub use crate::time::period::{
 
 pub use crate::time::calendars::nullcalendar::NullCalendar;
 use once_cell::sync::Lazy;
-static NULL_CALENDAR: Lazy<NullCalendar> = Lazy::new(|| NullCalendar::default());
+static NULL_CALENDAR: Lazy<NullCalendar> = Lazy::new(NullCalendar::default);
+
+pub use crate::enums::{
+    CreditRating,
+    RankType,
+    IssuerType,
+    StockRankType,
+};
+pub use crate::instrument::InstrumentTrait;
+
+pub use crate::currency::{
+    Currency,
+    FxCode,
+};
+pub use crate::instruments::bond::BondInfo;

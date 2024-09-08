@@ -2,7 +2,7 @@ use crate::definitions::{Integer, Real};
 use crate::instrument::InstrumentTrait;
 use crate::instruments::bond::Bond;
 use crate::time::conventions::PaymentFrequency;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 //
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -79,15 +79,18 @@ impl KTBF {
                 );
                 return Err(err());
             }
-            let maturity = bond.get_maturity().unwrap();
+            let maturity = inst_info.get_maturity().unwrap();
             if pricing_date.unwrap() != maturity {
                 let err = || anyhow!(
-                    "({}:{}) The pricing date of the underlying bond {} ({}) in ktbf ({:?}) \
-                    is not the same as the ktbf maturity",
+                    "({}:{}) The pricing date of the underlying bond {} ({}) in ktbf ({:?}) is not the same as the ktbf maturity\n\
+                    bond pricing date: {:?},\n\
+                    ktbf maturity: {:?}",
                     file!(), line!(),
                     bond.get_name(),
                     bond.get_id(),
                     inst_info.id,
+                    pricing_date.unwrap(),
+                    maturity,
                 );
                 return Err(err());
             }
@@ -136,6 +139,7 @@ mod tests {
         InstType,
     };
     
+    
     use anyhow::Result;
     use time::macros::datetime;
 
@@ -149,14 +153,28 @@ mod tests {
             currency: Currency::KRW,
             issue_date: Some(datetime!(2021-01-01 00:00:00 +09:00)),
             maturity: Some(datetime!(2022-01-01 00:00:00 +09:00)),
-            ..InstInfo::default()
+            unit_notional: 100.0,
+            accounting_level: crate::AccountingLevel::L1,
         };
-
 
         let virtual_bond = KtbfVirtualBond::new(
             5, 0.03, PaymentFrequency::SemiAnnually, 100.0
         );
-        let bond = Bond::default();
+
+        let mut bond = Bond::default();
+        let bond_id = StaticId::from_str("KR7005930003", "KRX");
+        let bond_inst_info = InstInfo {
+            id: bond_id,
+            inst_type: InstType::Bond,
+            name: String::from("KTBF"),
+            currency: Currency::KRW,
+            issue_date: Some(datetime!(2021-01-01 00:00:00 +09:00)),
+            maturity: Some(datetime!(2022-01-01 00:00:00 +09:00)),
+            unit_notional: 100.0,
+            accounting_level: crate::AccountingLevel::L1,
+        };
+        bond.set_inst_info(bond_inst_info);
+        bond.set_pricing_date(datetime!(2022-01-01 00:00:00 +09:00));
         let borrowing_curve_id = StaticId::from_str("KR7005930003", "KRX");
         
         let ktbf = KTBF::new(
@@ -166,6 +184,7 @@ mod tests {
             vec![bond],
             borrowing_curve_id,
         )?;
+
         let serialized = serde_json::to_string(&ktbf)?;
         let deserialized: KTBF = serde_json::from_str(&serialized)?;
         assert_eq!(ktbf, deserialized);

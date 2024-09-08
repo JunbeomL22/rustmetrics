@@ -7,7 +7,7 @@ use crate::{
     InstType,
     AccountingLevel,
 };
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct InstInfo {
@@ -46,17 +46,17 @@ impl std::fmt::Debug for InstInfo {
         write!(f, "    unit_notional: ")?;
         write_number_with_commas(f, self.unit_notional)?;
         writeln!(f)?;
-        match self.issue_date {
+        let _ = match self.issue_date {
             Some(issue_date) => writeln!(f, "    issue_date: {:?}", issue_date.date()),
             None => writeln!(f, "    issue_date: None"),
         };
 
-        match self.maturity {
+        let _ = match self.maturity {
             Some(maturity) => writeln!(f, "    maturity: {:?}", maturity.date()),
             None => writeln!(f, "    maturity: None"),
         };
 
-        writeln!(f, "    accounting_level: {:?}", self.accounting_level);
+        let _ = writeln!(f, "    accounting_level: {:?}", self.accounting_level);
 
         Ok(())
     }

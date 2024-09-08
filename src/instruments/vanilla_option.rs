@@ -7,7 +7,7 @@ use crate::InstInfo;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 //
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VanillaOption {
@@ -25,7 +25,7 @@ pub struct VanillaOption {
 impl Default for VanillaOption {
     fn default() -> VanillaOption {
         let inst_info = InstInfo::default();
-        let settlement_date = inst_info.maturity.unwrap().clone();
+        let settlement_date = inst_info.maturity.unwrap();
         VanillaOption {
             inst_info,
             strike: 0.0,
@@ -54,7 +54,7 @@ impl VanillaOption {
         
     ) -> VanillaOption {
         let currency = inst_info.currency;
-        let settlement_date = settlement_date.unwrap_or(inst_info.maturity.unwrap().clone());
+        let settlement_date = settlement_date.unwrap_or(inst_info.maturity.unwrap());
 
         let quanto_fx_code = if currency != underlying_currency {
             Some(FxCode::new(underlying_currency, currency))

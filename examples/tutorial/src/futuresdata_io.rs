@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use quantlib::currency::Currency;
-use quantlib::instruments::futures::Futures;
+use rustmetrics::currency::Currency;
+use rustmetrics::instruments::futures::Futures;
 use serde_json::{from_str, to_string_pretty};
 use std::fs::{read_to_string, write};
 use time::macros::datetime;

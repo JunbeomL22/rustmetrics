@@ -8,7 +8,7 @@ use ndarray::Array2;
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 /// CalculationResult is a struct that holds the result of the calculation.
 /// It is used to store the result of the calculation of the pricing engine.
@@ -488,7 +488,7 @@ impl CalculationResult {
             Some(delta) => {
                 let mut new_delta = FxHashMap::default();
                 for (und_code, v) in delta {
-                    new_delta.insert(und_code.clone(), v * fx_rate);
+                    new_delta.insert(*und_code, v * fx_rate);
                 }
                 Some(new_delta)
             }
@@ -499,7 +499,7 @@ impl CalculationResult {
             Some(gamma) => {
                 let mut new_gamma = FxHashMap::default();
                 for (und_code, v) in gamma {
-                    new_gamma.insert(und_code.clone(), v * fx_rate);
+                    new_gamma.insert(*und_code, v * fx_rate);
                 }
                 Some(new_gamma)
             }
@@ -510,7 +510,7 @@ impl CalculationResult {
             Some(vega) => {
                 let mut new_vega = FxHashMap::default();
                 for (und_code, v) in vega {
-                    new_vega.insert(und_code.clone(), v * fx_rate);
+                    new_vega.insert(*und_code, v * fx_rate);
                 }
                 Some(new_vega)
             }
@@ -521,7 +521,7 @@ impl CalculationResult {
                 let mut new_vega_structure = FxHashMap::default();
                 for (und_code, v) in vega_structure {
                     let new_v = v.iter().map(|x| x * fx_rate).collect();
-                    new_vega_structure.insert(und_code.clone(), new_v);
+                    new_vega_structure.insert(*und_code, new_v);
                 }
                 Some(new_vega_structure)
             }
@@ -532,7 +532,7 @@ impl CalculationResult {
                 let mut new_vega_matrix = FxHashMap::default();
                 for (und_code, v) in vega_matrix {
                     let new_v = v.mapv(|x| x * fx_rate);
-                    new_vega_matrix.insert(und_code.clone(), new_v);
+                    new_vega_matrix.insert(*und_code, new_v);
                 }
                 Some(new_vega_matrix)
             }
@@ -544,7 +544,7 @@ impl CalculationResult {
             Some(div_delta) => {
                 let mut new_div_delta = FxHashMap::default();
                 for (und_code, v) in div_delta {
-                    new_div_delta.insert(und_code.clone(), v * fx_rate);
+                    new_div_delta.insert(*und_code, v * fx_rate);
                 }
                 Some(new_div_delta)
             }
@@ -555,7 +555,7 @@ impl CalculationResult {
                 let mut new_div_structure: FxHashMap<StaticId, Vec<f32>> = FxHashMap::default();
                 for (und_code, v) in div_structure {
                     let new_v = v.iter().map(|x| x * fx_rate).collect();
-                    new_div_structure.insert(und_code.clone(), new_v);
+                    new_div_structure.insert(*und_code, new_v);
                 }
                 Some(new_div_structure)
             }
@@ -565,7 +565,7 @@ impl CalculationResult {
             Some(rho) => {
                 let mut new_rho = FxHashMap::default();
                 for (curve_code, v) in rho {
-                    new_rho.insert(curve_code.clone(), v * fx_rate);
+                    new_rho.insert(*curve_code, v * fx_rate);
                 }
                 Some(new_rho)
             }
@@ -576,7 +576,7 @@ impl CalculationResult {
                 let mut new_rho_structure = FxHashMap::default();
                 for (curve_code, v) in rho_structure {
                     let new_v = v.iter().map(|x| x * fx_rate).collect();
-                    new_rho_structure.insert(curve_code.clone(), new_v);
+                    new_rho_structure.insert(*curve_code, new_v);
                 }
                 Some(new_rho_structure)
             }
@@ -687,7 +687,12 @@ mod tests {
 
         let und_id = StaticId::from_str("KOSPI200", "KRX");
         result.set_single_delta(und_id, 0.1);
-
+        
+        let mut deltamap = FxHashMap::default();
+        deltamap.insert(und_id, 0.1);
+        let delta_serde = serde_json::to_string_pretty(&deltamap).unwrap();
+        println!("delta_serde = {}", delta_serde);
+        dbg!(&result);
         let serialized = serde_json::to_string_pretty(&result).unwrap();
         println!("serialized = {}", serialized);
         let deserialized: CalculationResult = serde_json::from_str(&serialized).unwrap();

@@ -39,7 +39,7 @@ impl FxFutures {
     ) -> FxFutures {
         let settlement_date = match settlement_date {
             Some(date) => date,
-            None => inst_info.maturity.unwrap().clone(),
+            None => inst_info.maturity.unwrap(),
         };
 
         let fx_code = FxCode::new(underlying_currency, inst_info.currency);
@@ -87,7 +87,7 @@ mod tests {
         InstType,
         AccountingLevel,
     };
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
     use time::macros::datetime;
 
     #[test]
@@ -107,10 +107,12 @@ mod tests {
             inst_info,
             100.0,
             None,
-            Currency::KRW,
+            Currency::USD,
         );
 
         let serialized = serde_json::to_string(&fxfutures).unwrap();
+        //dbg!(fxfutures.clone());
+        //println!("serialized = {}", serialized);
         let deserialized: FxFutures = serde_json::from_str(&serialized).unwrap();
         assert_eq!(fxfutures, deserialized);
     }

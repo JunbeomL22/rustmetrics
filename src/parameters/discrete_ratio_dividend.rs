@@ -11,7 +11,7 @@ use ndarray::Array1;
 use std::{cell::RefCell, rc::Rc};
 use time;
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 #[derive(Clone, Debug)]
 enum DividendInterpolator {
@@ -56,8 +56,6 @@ impl DiscreteRatioDividend {
         id: StaticId,
     ) -> Result<DiscreteRatioDividend> {
         // Begining of the function
-        //let time_calculator = NullCalendar::default();
-
         let ex_dividend_dates: Vec<OffsetDateTime>;
         if let Some(dates) = data.get_dates_clone() {
             if dates.is_empty() {

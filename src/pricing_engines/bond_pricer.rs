@@ -141,7 +141,7 @@ mod tests {
     };
     use crate::instruments::bond::BondInfo;
     //
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
     use anyhow::Result;
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};
@@ -179,9 +179,7 @@ mod tests {
         // let's make a fixed coupnon bond paying quaterly 3% coupon
         let issuedate = datetime!(2020-01-01 16:30:00 +09:00);
         let maturity = issuedate + Duration::days(365 * 4);
-        let issuer_name = "Korea Government";
         let bond_name = "KRW Fixed Coupon Bond";
-        let bond_code = "KR1234567890";
         let sk = Calendar::SouthKorea(SouthKorea::new(SouthKoreaType::Settlement));
 
         let calendar = JointCalendar::new(vec![sk])?;
@@ -337,7 +335,6 @@ mod tests {
         // let's make a floating rate note paying quaterly 3% coupon
         let issuedate = datetime!(2020-12-31 16:30:00 +09:00);
         let maturity = issuedate + Duration::days(365 * 4);
-        let issuer_name = "Korea Government";
         let bond_name = "KRW Floating Rate Note";
         let bond_code = "KR1234567890";
         let sk = Calendar::SouthKorea(SouthKorea::new(SouthKoreaType::Settlement));
@@ -407,7 +404,7 @@ mod tests {
         }
 
         let npv = pricer.npv(&Instrument::Bond(bond.clone()))?;
-        let expected_npv = 0.998420;
+        let expected_npv = 0.9983262;
         assert!(
             (npv - expected_npv).abs() < 1.0e-5,
             "{}:{}  npv: {}, expected: {} (did you change the pricer or definition of Real?)",

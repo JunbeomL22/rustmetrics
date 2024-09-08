@@ -8,7 +8,7 @@ use crate::enums::{
 use crate::instrument::{Instrument, InstrumentTrait};
 use crate::instruments::plain_swap::PlainSwapType;
 //
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
@@ -156,7 +156,11 @@ impl MatchParameter {
                     instrument.get_currency(),
                 )) {
                     Some(curve_id) => Ok(*curve_id),
-                    None => Ok(StaticId::default()),
+                    None => {
+                        let msg = format!("id: {:?}, issuer_type: {:?}, credit_rating: {:?}, currency: {:?}", id, issuer_type, credit_rating, instrument.get_currency());
+                        flashlog::log_info!("CurveNotFound", message = msg);
+                        Ok(StaticId::default())
+                    },
                 }
             }
             // IRS (or OIS) uses rate index forward curve as discount curve
@@ -215,7 +219,8 @@ impl MatchParameter {
                 Some(curve_id) => res.push(*curve_id),
                 None => {
                     let err = || anyhow!(
-                        "{} has underlying ({:?}) but no collateral curve name in MatchParameter.collateral_curve_map",
+                        "({}:{}) {} has underlying ({:?}) but no collateral curve name in MatchParameter.collateral_curve_map",
+                        file!(), line!(),
                         instrument.get_name(),
                         id
                     );
@@ -232,14 +237,15 @@ impl MatchParameter {
         und_id: StaticId,
     ) -> Result<StaticId> {
         if let Some(id) = self.collateral_curve_map.get(&und_id) {
-            return Ok(*id);
+            Ok(*id)
         } else {
             let err = || anyhow!(
-                "{} has underlying ({:?}) but no collateral curve name in MatchParameter.collateral_curve_map",
+                "({}:{}) {} has underlying ({:?}) but no collateral curve name in MatchParameter.collateral_curve_map",
+                file!(), line!(),
                 instrument.get_name(),
                 und_id
             );
-            return Err(err());
+            Err(err())
         }
     }
     /// Curve name for underlying asset
@@ -257,7 +263,8 @@ impl MatchParameter {
                 Some(curve_id) => res.push(*curve_id),
                 None => {
                     let err = || anyhow!(
-                        "{} has underlying ({:?}) but no borrowing curve name in MatchParameter.collateral_curve_map",
+                        "({}:{}) {} has underlying ({:?}) but no borrowing curve name in MatchParameter.collateral_curve_map",
+                        file!(), line!(),
                         instrument.get_name(),
                         id
                     );

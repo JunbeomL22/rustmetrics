@@ -127,7 +127,7 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
     use time::macros::datetime;
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_fx_futures_pricer() -> Result<()> {

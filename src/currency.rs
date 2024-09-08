@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum Currency {
@@ -66,12 +66,13 @@ impl Currency {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, Hash, Copy)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash, Copy)]
 pub struct FxCode {
     currency1: Currency,
     currency2: Currency,
 }
 
+/*
 impl Serialize for FxCode {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -81,7 +82,7 @@ impl Serialize for FxCode {
         serializer.serialize_str(&s)
     }
 }
-
+ */
 impl FxCode {
     pub fn new(currency1: Currency, currency2: Currency) -> FxCode {
         FxCode {

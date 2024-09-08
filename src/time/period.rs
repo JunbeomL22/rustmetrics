@@ -17,6 +17,12 @@ pub struct Period {
     days: i32,
 }
 
+impl std::fmt::Display for Period {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}Y{}M{}D", self.years, self.months, self.days)
+    }
+}
+
 impl Period {
     pub fn new(years: i32, months: i32, days: i32) -> Period {
         Period {
@@ -40,7 +46,7 @@ impl Period {
 
         let mut num = 0;
         for c in tenor.chars() {
-            if c.is_digit(10) {
+            if c.is_ascii_digit() {
                 num = num * 10 + c.to_digit(10).unwrap() as i32;
             } else {
                 match c {
@@ -66,23 +72,6 @@ impl Period {
         })
     }
 
-    pub fn to_string(&self) -> String {
-        let mut result = String::new();
-        if self.years != 0 {
-            result.push_str(&self.years.to_string());
-            result.push('Y');
-        }
-        if self.months != 0 {
-            result.push_str(&self.months.to_string());
-            result.push('M');
-        }
-        if self.days != 0 {
-            result.push_str(&self.days.to_string());
-            result.push('D');
-        }
-        result
-    }
-
     #[inline]
     #[must_use]
     pub fn years(&self) -> i32 {
@@ -103,9 +92,9 @@ impl Period {
 
     pub fn apply_year(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         if self.years == 0 {
-            datetime.clone()
+            *datetime
         } else {
-            let mut new_datetime = datetime.clone();
+            let mut new_datetime = *datetime;
             let new_year = new_datetime.year() + self.years;
             let new_month = new_datetime.month();
             let eom_new = crate::NULL_CALENDAR
@@ -128,11 +117,13 @@ impl Period {
 
     pub fn apply_month(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         if self.months == 0 {
-            datetime.clone()
+            *datetime
         } else {
-            let mut new_datetime = datetime.clone();
-            let new_year = new_datetime.year();
+            let mut new_datetime = *datetime;
+            let mut new_year = new_datetime.year();
             let month_i32 = from_month_to_i32(new_datetime.month());
+
+            new_year += (month_i32 + self.months) / 12;
             let mut new_month_i32 = (month_i32 + self.months) % 12;
             new_month_i32 = if new_month_i32 < 0 { new_month_i32 + 12 } else { new_month_i32 };
             let new_month = from_i32_to_month(new_month_i32);
@@ -157,9 +148,9 @@ impl Period {
 
     pub fn apply_day(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         if self.days == 0 {
-            datetime.clone()
+            *datetime
         } else {
-            let mut new_datetime = datetime.clone();
+            let mut new_datetime = *datetime;
             let new_date = new_datetime.date() + time::Duration::days(self.days as i64);
             new_datetime = OffsetDateTime::new_in_offset(
                 new_date,
@@ -201,10 +192,10 @@ impl FinerPeriod {
 
     pub fn apply(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         let mut new_datetime = self.period.apply(datetime);
-        new_datetime = new_datetime + time::Duration::hours(self.hours as i64);
-        new_datetime = new_datetime + time::Duration::minutes(self.minutes as i64);
-        new_datetime = new_datetime + time::Duration::milliseconds(self.milli_seconds as i64);
-        new_datetime = new_datetime + time::Duration::nanoseconds(self.nano_seconds as i64);
+        new_datetime += time::Duration::hours(self.hours as i64);
+        new_datetime += time::Duration::minutes(self.minutes as i64);
+        new_datetime += time::Duration::milliseconds(self.milli_seconds as i64);
+        new_datetime += time::Duration::nanoseconds(self.nano_seconds as i64);
 
         new_datetime
     }
@@ -261,7 +252,7 @@ impl FinerPeriod {
         let mut num = 0;
         let mut is_period = true;
         for c in val.chars() {
-            if c.is_digit(10) {
+            if c.is_ascii_digit() {
                 num = num * 10 + c.to_digit(10).unwrap() as i32;
             } else {
                 match c {
@@ -335,10 +326,30 @@ mod tests {
         let datetime = datetime!(2023-12-31 00:00:00 +09:00);
         for i in 1..=36 {
             let period = Period::new(0, i, 0);
-            let month = from_i32_to_month(i % 12);
+            
             let new_datetime = period.apply(&datetime);
 
-            assert_eq!(new_datetime.month(), month);
+            let res = (from_month_to_i32(datetime.month()) + i) % 12;
+            let res_month = from_i32_to_month(res);
+            assert_eq!(
+                new_datetime.month(), res_month,
+                "Failed to add {} months to {}. Result: {}",
+                i, datetime, new_datetime
+            );
+        }
+
+        for i in 1..=36 {
+            let period = Period::new(0, -i, 0);
+            
+            let new_datetime = period.apply(&datetime);
+
+            let res = (from_month_to_i32(datetime.month()) - i) % 12;
+            let res_month = from_i32_to_month(res);
+            assert_eq!(
+                new_datetime.month(), res_month,
+                "Failed to add {} months to {}. Result: {}",
+                i, datetime, new_datetime
+            );
         }
     }
 
@@ -348,6 +359,14 @@ mod tests {
         for i in 1..=36 {
             let period = Period::new(i, 0, 0);
             let year = 2023 + i;
+            let new_datetime = period.apply(&datetime);
+
+            assert_eq!(new_datetime.year(), year);
+        }
+
+        for i in 1..=36 {
+            let period = Period::new(-i, 0, 0);
+            let year = 2023 - i;
             let new_datetime = period.apply(&datetime);
 
             assert_eq!(new_datetime.year(), year);

@@ -194,7 +194,7 @@ mod tests {
     use crate::instruments::bond::BondInfo;
     use time::macros::datetime;
     use time::Duration;
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_krx_yield_pricer() -> Result<()> {

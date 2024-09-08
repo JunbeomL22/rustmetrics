@@ -17,7 +17,7 @@ use ndarray::{array, Array1};
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 #[derive(Clone, Debug)]
 enum ZeroCurveInterpolator {
@@ -374,14 +374,14 @@ impl ZeroCurve {
         compounding: Compounding,
     ) -> Result<Real> {
         if date1 > date2 {
-            let error = anyhow!(
+            let error = || anyhow!(
                 "({}:{}) {:?} > {:?} in ZeroCurve::get_forward_rate_between_dates",
                 file!(),
                 line!(),
                 date1,
                 date2
             );
-            return Err(error);
+            return Err(error());
         }
 
         let t1 = self
@@ -454,16 +454,94 @@ impl ZeroCurve {
     }
 }
 
+impl Default for ZeroCurve {
+    fn default() -> Self {
+        let dt = EvaluationDate::new(datetime!(1970-01-01 00:00:00 UTC));
+        let evaluation_date = Rc::new(RefCell::new(dt));
+        let name = "default curve in ZeroCurve::default".to_string();
+        let data = VectorData::new(
+            array![0.0],
+            Some(vec![datetime!(2080-01-01 00:00:00 UTC)]), // dummy date
+            None,
+            Some(evaluation_date.borrow().get_date_clone()),
+            Currency::NIL,
+            name.clone(),
+            StaticId::from_str(name.as_str(), "nil"),
+        )
+        .expect("error in ZeroCurve::default");
+
+        ZeroCurve::new(
+            evaluation_date,
+            &data,
+            String::from("Default"),
+            StaticId::from_str("Default", "nil"),
+        )
+        .expect("error in ZeroCurve::default")
+    }
+}
+
+impl ZeroCurve {
+    pub fn new_dummy(eval_dt: Rc<RefCell<EvaluationDate>>) {
+        let name = "dummy".to_string();
+        let tenor = "50Y".to_string();
+        let date = crate::Tenor::new_from_string(&tenor)
+            .expect("error in ZeroCurve::new_dummy")
+            .apply(&eval_dt.borrow().get_date_clone());
+        let data = VectorData::new(
+            array![0.0],
+            Some(vec![date]),
+            None,
+            Some(eval_dt.borrow().get_date_clone()),
+            Currency::NIL,
+            name.clone(),
+            StaticId::from_str(name.as_str(), "nil"),
+        )
+        .expect("error in ZeroCurve::new_dummy");
+
+        ZeroCurve::new(
+            eval_dt,
+            &data,
+            String::from("Dummy"),
+            StaticId::from_str("Dummy", "nil"),
+        )
+        .expect("error in ZeroCurve::new_dummy");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::evaluation_date::EvaluationDate;
     use crate::time::calendars::nullcalendar::NullCalendar;
     use crate::utils::string_arithmetic::add_period;
+    use crate::Tenor;
     use anyhow::Ok;
     use ndarray::array;
     use std::rc::Rc;
     use time::macros::datetime;
+
+    #[test]
+    fn test_default() -> Result<()> {
+        let _zero_curve = ZeroCurve::default();
+        let eval_date = datetime!(2024-01-01 00:00:00 UTC);
+        for i in 0..28 {
+            let ten_str = format!("{}D", i);
+            let date = Tenor::new_from_string(&ten_str)?.apply(&eval_date);
+            assert_eq!(_zero_curve.get_discount_factor_at_date(&date)?, 1.0);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_dummy_curve() -> Result<()> {
+        let eval_dt = datetime!(2021-01-01 00:00:00 UTC);
+        let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_dt)));
+        let _zero_curve = ZeroCurve::dummy_curve()?;
+        let eval_date = evaluation_date.borrow().get_date_clone();
+        let date = Tenor::new_from_string("3Y")?.apply(&eval_date);
+        assert_eq!(_zero_curve.get_discount_factor_at_date(&date)?, 1.0);
+        Ok(())
+    }
 
     #[test]
     fn test_zero_curve() -> Result<()> {

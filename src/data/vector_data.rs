@@ -3,7 +3,7 @@ use crate::definitions::{Real, Time};
 use crate::time::{calendar_trait::CalendarTrait, calendars::nullcalendar::NullCalendar};
 use std::fmt;
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use anyhow::{anyhow, Result};
 use ndarray::Array1;
 use serde::{Deserialize, Serialize};
@@ -137,7 +137,7 @@ impl VectorData {
         
         let name = "test_vector_data".to_string();
         let id = StaticId::from_str(name.as_str(), "test");
-        Ok(VectorData::new(
+        VectorData::new(
             value,
             None,
             Some(times),
@@ -145,7 +145,7 @@ impl VectorData {
             currency,
             name,
             id,
-        )?)
+        )
     }
 
     pub fn test_dividend_data(value: Real, currency: Currency) -> Result<VectorData> {
@@ -154,7 +154,7 @@ impl VectorData {
         
         let name = "test_vector_data".to_string();
         let id = StaticId::from_str(name.as_str(), "test");
-        Ok(VectorData::new(
+        VectorData::new(
             values,
             Some(dates),
             None,
@@ -162,7 +162,7 @@ impl VectorData {
             currency,
             name,
             id,
-        )?)
+        )
     }
 }
 

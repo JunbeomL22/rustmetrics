@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use ndarray::array;
-use quantlib::currency::Currency;
-use quantlib::data::vector_data::VectorData;
+use rustmetrics::currency::Currency;
+use rustmetrics::data::vector_data::VectorData;
 use serde_json::{from_str, to_string_pretty};
 use std::fs::write;
 use time::macros::datetime;

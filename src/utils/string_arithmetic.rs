@@ -44,7 +44,7 @@ pub fn from_period_string_to_float(period: &str) -> Result<Time> {
 }
 
 pub fn from_i32_to_month(item: i32) -> Month {
-    match item {
+    match (item + 12) % 12 {
         0 => Month::January,
         1 => Month::February,
         2 => Month::March,
@@ -83,7 +83,7 @@ pub fn from_month_to_i32(month: Month) -> i32 {
 /// # Examples
 /// ```
 /// use time::macros::datetime;
-/// use quantlib::utils::string_arithmetic::add_period;
+/// use rustmetrics::utils::string_arithmetic::add_period;
 ///
 /// let x = datetime!(2021-01-01 00:00:00 UTC);
 /// let y = add_period(&x, "1Y1M1D1h1min1sec");
@@ -156,7 +156,7 @@ pub fn add_period(datetime: &OffsetDateTime, duration: &str) -> OffsetDateTime {
 /// # Examples
 /// ```
 /// use time::macros::datetime;
-/// use quantlib::utils::string_arithmetic::sub_period;
+/// use rustmetrics::utils::string_arithmetic::sub_period;
 ///
 /// let x = datetime!(2021-01-01 00:00:00 UTC);
 /// let y = sub_period(&x, "1Y1M1D1h1min1sec");

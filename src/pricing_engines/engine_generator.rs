@@ -15,12 +15,8 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use rustc_hash::FxHashMap;
-use flashlog::{
-    lazy_string::LazyString,
-    log_info,
-};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct InstrumentCategory {
@@ -63,7 +59,7 @@ impl InstrumentCategory {
         // check underlying codes are the same (not inclusion)
         if let Some(underlying_ids) = &self.underlying_ids {
             if !underlying_ids_inp.is_empty()
-                && underlying_ids.iter().cloned().collect::<Vec<StaticId>>() != underlying_ids_inp
+                && underlying_ids.to_vec() != underlying_ids_inp
             {
                 res = false;
             }
@@ -269,7 +265,7 @@ impl EngineGenerator {
                 let mut mut_res = shared_results.lock().unwrap();
 
                 for (key, value) in result.iter() {
-                    mut_res.insert(key.clone(), value.borrow().clone());
+                    mut_res.insert(*key, value.borrow().clone());
                 }
 
                 Ok(())

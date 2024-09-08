@@ -29,7 +29,6 @@ pub enum CreditRating {
     B = 15,
     C = 16,
     D = 17,
-    Undefined = 18,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash, Default)]

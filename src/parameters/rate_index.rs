@@ -7,10 +7,9 @@ use crate::instruments::schedule::BaseSchedule;
 use crate::parameters::{past_price::DailyClosePrice, zero_curve::ZeroCurve};
 use crate::time::jointcalendar::JointCalendar;
 use crate::util::min_offsetdatetime;
-use crate::utils::string_arithmetic::add_period;
 use crate::Tenor;
 //
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, rc::Rc};
@@ -76,7 +75,7 @@ impl RateIndex {
     /// close_data (Rc<CloseData>): historical data which is used when the fixing date is before the evaluation date
     /// pricing_date (OffsetDateTime): evaluation date
     /// compound_tenor (Option<&String>): compounding tenor. This is optional and None means that it is not a overnight type index.
-    /// For example, if the floatin part is CD91, Libor3M, etc, it is None, but in case of SOFR1D, it is Some(String::from("1D"))
+    /// For example, if the  part is CD91, Libor3M, etc, it is None, but in case of SOFR1D, it is Some(String::from("1D"))
     #[allow(clippy::too_many_arguments)]
     pub fn get_coupon_amount(
         &self,
@@ -85,7 +84,7 @@ impl RateIndex {
         forward_curve: Rc<RefCell<ZeroCurve>>,
         close_data: Rc<DailyClosePrice>,
         pricing_date: &OffsetDateTime,
-        compound_tenor: Option<&String>,
+        compound_tenor: Option<&Tenor>,
         calendar: &JointCalendar,
         daycounter: &DayCountConvention,
         fixing_days: i64,
@@ -147,12 +146,13 @@ impl RateIndex {
                         Compounding::Simple,
                     )?;
 
-                    let last_fixing_date =
-                        *base_schedule.get_calc_end_date() - Duration::days(fixing_days);
+                    let last_fixing_date = *base_schedule.get_calc_end_date() - Duration::days(fixing_days);
+                    let last_calc_end_date = self.curve_tenor.apply(&last_fixing_date);
+                    
                     let last_rate = forward_curve.borrow().get_forward_rate_between_dates(
                         &last_fixing_date,
                         //&add_period(&last_fixing_date, self.curve_tenor.as_str()),
-                        &self.curve_tenor.apply(&last_fixing_date),
+                        &last_calc_end_date,
                         Compounding::Simple,
                     )?;
 
@@ -165,7 +165,7 @@ impl RateIndex {
                     )?;
                     return Ok((rate + spread) * frac);
                 }
-                let curve_end_date_from_eval_date = add_period(pricing_date, comp_tenor.as_str());
+                let curve_end_date_from_eval_date = comp_tenor.apply(pricing_date);
                 let mut calc_start_date = *base_schedule.get_calc_start_date();
                 let mut next_calc_date: OffsetDateTime;
                 let calc_end_date = *base_schedule.get_calc_end_date();
@@ -187,7 +187,7 @@ impl RateIndex {
                         &BusinessDayConvention::Preceding,
                     )?;
 
-                    next_calc_date = add_period(&calc_start_date, comp_tenor.as_str());
+                    next_calc_date = comp_tenor.apply(&calc_start_date);
                     next_calc_date = min_offsetdatetime(&next_calc_date, &calc_end_date);
 
                     frac = calendar.year_fraction(&calc_start_date, &next_calc_date, daycounter)?;
@@ -240,6 +240,7 @@ mod tests {
         calendars::unitedstates::{UnitedStates, UnitedStatesType},
         jointcalendar::JointCalendar,
     };
+    use crate::Tenor;
     use rustc_hash::FxHashMap;
     //
     use anyhow::Result;
@@ -257,8 +258,8 @@ mod tests {
         let _payment_frequency = PaymentFrequency::Quarterly;
         let _business_day_convention = BusinessDayConvention::ModifiedFollowing;
         let daycounter = DayCountConvention::Actual365Fixed;
-        let _tenor = "1D".to_string();
-        let compound_tenor = Some("1D".to_string());
+        
+        let compound_tenor = Tenor::new_from_string("1D")?;
         let fixing_days = 7;
         let calendar = JointCalendar::new(vec![Calendar::UnitedStates(UnitedStates::new(
             UnitedStatesType::Sofr,
@@ -327,7 +328,7 @@ mod tests {
             zero_curve.clone(),
             close_data.clone(),
             evaluation_date.borrow().get_date(),
-            compound_tenor.as_ref(),
+            Some(&compound_tenor),
             &calendar,
             &daycounter,
             fixing_days,

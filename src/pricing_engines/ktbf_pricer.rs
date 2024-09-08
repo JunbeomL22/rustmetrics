@@ -113,7 +113,7 @@ mod tests {
     use std::rc::Rc;
     use time::macros::datetime;
     use time::Duration;
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_ktbf_pricer() -> Result<()> {
@@ -153,11 +153,12 @@ mod tests {
         let sk = Calendar::SouthKorea(SouthKorea::new(SouthKoreaType::Settlement));
         let calendar = JointCalendar::new(vec![sk])?;
         let ktbf_maturity = eval_date + Duration::days(90);
+        
         // make two bonds whose maturity is 3 year and 5 year from the evaluation date
         // both are fixed coupon bond which 3% coupon rate
         // make it from crate::instruments::bond::Bond::new_from_convention
-        let issue_date = datetime!(2024-01-02 00:00:00 UTC);
-        let maturity = datetime!(2027-01-02 00:00:00 UTC);
+        let bond1_issue_date = datetime!(2024-01-02 00:00:00 UTC);
+        let bond1_maturity = datetime!(2027-01-02 00:00:00 UTC);
         let inst_id = StaticId::from_str("Bond1", "KRX");
         let inst_info = InstInfo {
             id: inst_id,
@@ -165,8 +166,8 @@ mod tests {
             inst_type: InstType::Bond,
             currency: Currency::KRW,
             unit_notional: 10_000.0,
-            issue_date: Some(issue_date.clone()),
-            maturity: Some(maturity.clone()),
+            issue_date: Some(bond1_issue_date.clone()),
+            maturity: Some(bond1_maturity.clone()),
             accounting_level: crate::AccountingLevel::L1,
         };
 
@@ -184,8 +185,8 @@ mod tests {
             
             false,
             //
-            Some(issue_date.clone()),
-            Some(issue_date.clone()),
+            Some(bond1_issue_date.clone()),
+            Some(ktbf_maturity.clone()),            
             None,
             //
             Some(0.03),
@@ -203,7 +204,8 @@ mod tests {
             0,
         )?;
 
-        let maturity = datetime!(2029-01-02 00:00:00 UTC);
+        let bond2_issue_date = datetime!(2024-01-02 00:00:00 UTC);
+        let bond2_maturity = datetime!(2029-01-02 00:00:00 UTC);
         let bond_id2 = StaticId::from_str("Bond2", "KRX");
         let inst_info2 = InstInfo {
             id: bond_id2,
@@ -211,8 +213,8 @@ mod tests {
             inst_type: InstType::Bond,
             currency: Currency::KRW,
             unit_notional: 10_000.0,
-            issue_date: Some(issue_date.clone()),
-            maturity: Some(maturity.clone()),
+            issue_date: Some(bond2_issue_date.clone()),
+            maturity: Some(bond2_maturity.clone()),
             accounting_level: crate::AccountingLevel::L1,
         };
 
@@ -228,8 +230,8 @@ mod tests {
             //
             false,
             //
-            Some(issue_date.clone()),
-            Some(issue_date.clone()),
+            Some(bond2_issue_date.clone()),
+            Some(ktbf_maturity.clone()),
             None,
             //
             Some(0.03),
@@ -249,6 +251,7 @@ mod tests {
 
         let virtual_bond = KtbfVirtualBond::new(3, 0.05, PaymentFrequency::SemiAnnually, 100.0);
 
+        let ktbf_issue_date = datetime!(2024-01-02 00:00:00 UTC);
         let ktbf_id = StaticId::from_str("KTBF3Y", "KRX");
         let ktbf_info = InstInfo {
             id: ktbf_id,
@@ -256,14 +259,14 @@ mod tests {
             inst_type: InstType::KTBF,
             currency: Currency::KRW,
             unit_notional: 1_000_000.0,
-            issue_date: Some(issue_date.clone()),
+            issue_date: Some(ktbf_issue_date.clone()),
             maturity: Some(ktbf_maturity.clone()),
             accounting_level: crate::AccountingLevel::L1,
         };
 
         let ktbf = KTBF::new(
             ktbf_info,
-            Some(issue_date.clone()),
+            Some(ktbf_issue_date.clone()),
             virtual_bond,
             vec![bond1, bond2],
             StaticId::from_str("KTBF3Y", "KRX"),

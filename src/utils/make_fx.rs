@@ -1,5 +1,6 @@
 use crate::currency::{Currency, FxCode};
 
+#[allow(unused)]
 fn currencies_to_fx_codes(
     currencies: Vec<Currency>,
     must_include: Option<Vec<FxCode>>,

@@ -15,7 +15,7 @@ impl Cash {
     pub fn new_from_currency(currency: Currency) -> Cash {
         let inst_info = InstInfo {
             name: currency.as_str().to_string(),
-            currency: currency,
+            currency,
             ..Default::default()
         };
         Cash { inst_info }

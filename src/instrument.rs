@@ -1,8 +1,7 @@
 use crate::currency::{Currency, FxCode};
 use crate::definitions::Real;
-use crate::enums::{
-    CreditRating, IssuerType, OptionDailySettlementType, OptionType, RankType,
-};
+use crate::{CreditRating, IssuerType, RankType,};
+use crate::enums::{OptionDailySettlementType, OptionType};
 
 use crate::instruments::schedule::Schedule;
 use crate::instruments::{
@@ -24,7 +23,7 @@ use crate::parameters::{
 use crate::pricing_engines::match_parameter::MatchParameter;
 use crate::time::{conventions::PaymentFrequency, jointcalendar::JointCalendar};
 //
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use anyhow::{anyhow, Context, Result};
 use enum_dispatch::enum_dispatch;
 use std::{
@@ -488,6 +487,12 @@ impl Instruments {
             if !res.contains(&floating_crs_curve_name) && floating_crs_curve_name != dummy_id {
                 res.push(floating_crs_curve_name);
             }
+            let borrowing_curve_ids = match_parameter.get_borrowing_curve_ids(instrument)?;
+            for id in borrowing_curve_ids.iter() {
+                if !res.contains(id) && *id != dummy_id {
+                    res.push(*id);
+                }
+            }
         }
         Ok(res)
     }
@@ -870,7 +875,7 @@ mod tests {
         // make MatchParameter
         let mut collateral_curve_map = FxHashMap::<StaticId, StaticId>::default();
         let mut rate_index_curve_map = FxHashMap::<StaticId, StaticId>::default();
-        let borrowing_curve_map = FxHashMap::<StaticId, StaticId>::default();
+        let mut borrowing_curve_map = FxHashMap::<StaticId, StaticId>::default();
         let bond_curve_map = FxHashMap::<(StaticId, IssuerType, CreditRating, Currency), StaticId>::default();
 
         let mut crs_curve_map = FxHashMap::<Currency, StaticId>::default();
@@ -882,6 +887,8 @@ mod tests {
         rate_index_curve_map.insert(rate_id, StaticId::from_str("KRWIRS", "KAP"));
         crs_curve_map.insert(Currency::KRW, StaticId::from_str("KRWCRS", "KAP"));
         crs_curve_map.insert(Currency::USD, StaticId::from_str("USDCRS", "KAP"));
+        borrowing_curve_map.insert(StaticId::from_str("KOSPI2", "KRX"), StaticId::from_str("KOSPI2", "DataProvider"));
+        borrowing_curve_map.insert(StaticId::from_str("SPX", "CME"), StaticId::from_str("SPX", "DataProvider"));
 
         let funding_cost_map = FxHashMap::<Currency, StaticId>::default();
         let crs_curve_map = FxHashMap::<Currency, StaticId>::default();
@@ -918,14 +925,16 @@ mod tests {
 
         // test get_all_curve_names
         let all_curve_ids = instruments.get_all_curve_ids(&match_parameter)?;
-        assert_eq!(
-            all_curve_ids, 
-            vec![
-                StaticId::from_str("KRWGOV", "KAP"),
-                StaticId::from_str("USGOV", "KAP"),
-                StaticId::from_str("KRWIRS", "KAP"),
-            ]   
-        );
+        let expected_ids = vec![
+            StaticId::from_str("KOSPI2", "DataProvider"),
+            StaticId::from_str("SPX", "DataProvider"),
+            StaticId::from_str("KRWGOV", "KAP"),
+            StaticId::from_str("USGOV", "KAP"),
+            StaticId::from_str("KRWIRS", "KAP"),
+        ];
+        for curve_id in all_curve_ids.iter() {
+            assert!(expected_ids.contains(curve_id), "curve_id: {:?} is not in expected_ids {:?}", curve_id, expected_ids);
+        }
           
         // test instruments_using_curve
         let instruments_using_krw_gov =

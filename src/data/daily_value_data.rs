@@ -3,7 +3,7 @@ use crate::time::calendar::Calendar;
 use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 use time::{Date, Time, UtcOffset};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

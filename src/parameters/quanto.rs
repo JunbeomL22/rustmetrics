@@ -4,7 +4,7 @@ use crate::parameters::{
     volatilities::constant_volatility::ConstantVolatility, volatility::Volatility,
 };
 use std::{cell::RefCell, rc::Rc};
-use static_id::StaticId;
+use static_id::static_id::StaticId;
 
 /// Quanto parameter.
 /// It is assumed that the correlation are constant.

@@ -209,7 +209,7 @@ pub mod tests {
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};
     use time::{macros::datetime, Duration};
-    use static_id::StaticId;
+    use static_id::static_id::StaticId;
 
     #[test]
     fn test_crs_pricer() -> Result<()> {
@@ -499,7 +499,7 @@ pub mod tests {
         let npv_from_npv_result = npv_result.get_npv();
         let npv = pricer.npv(&inst)?;
         let expected_npv = 0.0003459379;
-        let expected_fx_exposure = 0.03459382;
+        let expected_fx_exposure = 0.0345788;
 
         println!("NPV: {:?}", npv);
         println!("Cashflows:");

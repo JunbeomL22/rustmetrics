@@ -6,7 +6,7 @@
 /// If the value is greater than or equal to the last element, the index of the last element is returned.
 /// # Example
 /// ```
-/// use quantlib::utils::find_index::binary_search_index;
+/// use rustmetrics::utils::find_index::binary_search_index;
 ///
 /// let vec = vec![1.0, 2.0, 6.0, 9.0, 11.0];
 /// let index = binary_search_index(&vec, 0.5);
@@ -63,7 +63,7 @@ pub fn binary_search_index<T: PartialOrd + Copy>(vec: &[T], value: T) -> usize {
 /// If we have to deal with extremely large input vector, we can add the iteration number to perform binary search
 /// # Example
 /// ```
-/// use quantlib::utils::find_index::vectorized_search_index_for_sorted_vector;
+/// use rustmetrics::utils::find_index::vectorized_search_index_for_sorted_vector;
 /// let vec = vec![1.0, 2.0, 6.0, 9.0, 11.0];
 /// let search_vec = vec![0.5, 5.0, 10.0];
 /// let index = vectorized_search_index_for_sorted_vector(&vec, &search_vec);

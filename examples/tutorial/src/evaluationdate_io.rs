@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use quantlib::evaluation_date::EvaluationDate;
+use rustmetrics::evaluation_date::EvaluationDate;
 use serde_json::{from_str, to_string_pretty};
 use std::fs::{read_to_string, write};
 use time::macros::datetime;

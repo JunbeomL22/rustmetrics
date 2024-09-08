@@ -110,10 +110,12 @@ impl InterpolatorReal1D for LinearInterpolator1D {
                 }
             } else {
                 return Err(anyhow!(
-                    "({}:{}) x (= {}) is out of range",
+                    "({}:{}) x (= {}) is out of range where\n\
+                        domain: Array1<Real> = {:?}",
                     file!(),
                     line!(),
-                    x
+                    x,
+                    self.domain
                 ));
             }
         }
