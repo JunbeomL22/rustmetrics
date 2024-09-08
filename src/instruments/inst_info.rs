@@ -7,8 +7,48 @@ use crate::{
     InstType,
     AccountingLevel,
 };
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
+/// Instrument information.
+/// # Arguments
+/// * `id` - (static_id::StaticId) A unique identifier for the instrument 
+/// * `name` - (String) The name of the instrument
+/// * `inst_type` - (InstType) The type of instrument
+/// * `currency` - (Currency) The currency of the instrument
+/// * `unit_notional` - (Real) The unit notional value of the instrument
+/// * `issue_date` - (Option<OffsetDateTime>) The issue date of the instrument
+/// * `maturity` - (Option<OffsetDateTime>) The maturity date of the instrument
+/// * `accounting_level` - (AccountingLevel) The accounting level of the instrument
+/// # Example
+/// ```
+/// use serde_json;
+/// use static_id::StaticId;
+/// use time::OffsetDateTime;
+/// use rustmetrics::instruments::inst_info::{InstInfo, InstType, Currency, AccountingLevel};
+/// use rustmetrics::definitions::Real;
+/// use rustmetrics::Currency;
+/// 
+/// let instrument_info = InstInfo {
+///    id: StaticId::from_str("AAPL", "Some Brocker"),
+///    name: "Apple Inc.".to_string(),
+///    inst_type: InstType::Stock,
+///    currency: Currency::USD,
+///    unit_notional: 1.0,
+///    issue_date: None,
+///    maturity: None,
+///    accounting_level: AccountingLevel::default(),
+/// };
+/// 
+/// let serialized = serde_json::to_string_pretty(&instrument_info).unwrap();
+/// 
+/// println!("serialized = {}", serialized);
+/// 
+/// let deserialized: InstInfo = serde_json::from_str(&serialized).unwrap();
+/// 
+/// println!("deserialized = {:?}", deserialized);
+///
+/// assert_eq!(instrument_info, deserialized);
+/// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct InstInfo {
     pub id: StaticId,

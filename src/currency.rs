@@ -3,8 +3,18 @@ use std::fmt::Display;
 use std::hash::Hash;
 use static_id::static_id::StaticId;
 
+/// Enum representing various currencies.
+/// # Example
+/// ```
+/// let currency = Currency::KRW;
+/// let serialized = to_string(&currency).unwrap();
+/// assert_eq!(serialized, "\"KRW\"");
+/// let deserialized: Currency = from_str(&serialized).unwrap();
+/// assert_eq!(deserialized, currency);
+/// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum Currency {
+    /// Default value representing no currency.
     #[default]
     NIL,
     KRW,
@@ -21,13 +31,14 @@ pub enum Currency {
 }
 
 impl std::fmt::Display for Currency {
+    /// Implement the formatting logic for Currency.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         // Implement the formatting logic for Currency here
         write!(f, "{}", self.as_str())
     }
 }
 
-//implment from<&str> for Currency
+/// Implement conversion from &str to Currency.
 impl From<&str> for Currency {
     fn from(s: &str) -> Self {
         match s {
@@ -48,6 +59,7 @@ impl From<&str> for Currency {
 }
 
 impl Currency {
+    /// Returns the string representation of the currency.
     pub fn as_str(&self) -> &'static str {
         match self {
             Currency::NIL => "NIL",
@@ -66,24 +78,28 @@ impl Currency {
     }
 }
 
+/// Struct representing a foreign exchange code, which consists of two currencies.
+/// # Example
+/// ```
+/// let fxcode = FxCode::new(Currency::KRW, Currency::USD);
+/// let serialized = to_string(&fxcode).unwrap();
+/// assert_eq!(serialized, "\"KRWUSD\"");
+/// let deserialized: FxCode = from_str(&serialized).unwrap();
+/// assert_eq!(deserialized, fxcode);
+/// ```
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash, Copy)]
 pub struct FxCode {
-    currency1: Currency,
-    currency2: Currency,
+    pub currency1: Currency,
+    pub currency2: Currency,
 }
 
-/*
-impl Serialize for FxCode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let s = format!("{:?}_{:?}", self.currency1, self.currency2);
-        serializer.serialize_str(&s)
-    }
-}
- */
 impl FxCode {
+    /// Creates a new FxCode instance.
+    /// # Arguments
+    /// * `currency1` - The first currency in the pair.
+    /// * `currency2` - The second currency in the pair.
+    /// # Returns
+    /// Returns a new FxCode instance.
     pub fn new(currency1: Currency, currency2: Currency) -> FxCode {
         FxCode {
             currency1,
@@ -179,5 +195,14 @@ mod tests {
         let as_str = currency.as_str();
 
         assert_eq!(as_str, "KRW");
+    }
+
+    #[test]
+    fn test_fxcode_serialization() {
+        let fxcode = FxCode::new(Currency::KRW, Currency::USD);
+        let serialized = to_string(&fxcode).unwrap();
+        assert_eq!(serialized, "\"KRWUSD\"");
+        let deserialized: FxCode = from_str(&serialized).unwrap();
+        assert_eq!(deserialized, fxcode);
     }
 }

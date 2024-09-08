@@ -8,14 +8,57 @@ use anyhow::{anyhow, Result};
 use ndarray::Array1;
 use serde::{Deserialize, Serialize};
 
+/// Represents a vector of data points, typically used for term structures.
+/// This struct encapsulates various attributes related to a series of data points,
+/// including values, dates, times, and other identifying information.
+/// /// # Example
+///
+/// ```
+/// use super::*;
+/// use ndarray::array;
+/// use serde_json;
+///
+/// let vector_data = VectorData::new(
+///     array![1.0, 2.0, 3.0, 4.0, 5.0],
+///     None,
+///     Some(array![0.0, 1.0, 2.0, 3.0, 4.0]),
+///     None,
+///     Currency::KRW,
+///     "test_vector_data_serialization".to_string(),
+///     StaticId::from_str("test_vector_data_serialization", "test"),
+/// ).expect("failed to create VectorData");
+///
+/// // Serialization
+/// let serialized = serde_json::to_string(&vector_data).unwrap();
+///
+/// // Deserialization
+/// let deserialized: VectorData = serde_json::from_str(&serialized).unwrap();
+///
+/// // Equality checks
+/// assert_eq!(vector_data.get_value_clone(), deserialized.get_value_clone());
+/// assert_eq!(vector_data.get_times_clone(), deserialized.get_times_clone());
+/// ```
 #[derive(Serialize, Deserialize, Clone)]
 pub struct VectorData {
+    /// The vector of numerical values.
     pub value: Array1<Real>,
+
+    /// Optional vector of dates corresponding to each value.
     pub dates: Option<Vec<OffsetDateTime>>,
+
+    /// Vector of times corresponding to each value.
     pub times: Array1<Time>,
+
+    /// The market datetime for this data set, if applicable.
     pub market_datetime: Option<OffsetDateTime>,
+
+    /// The currency in which the values are denominated.
     pub currency: Currency,
+
+    /// A descriptive name for this data set.
     pub name: String,
+
+    /// A unique identifier for this data set.
     pub id: StaticId,
 }
 
@@ -34,11 +77,25 @@ impl fmt::Debug for VectorData {
 }
 
 impl VectorData {
-    /// value: Array1<Real>,
-    /// dates: Option<Vec<OffsetDateTime>>,
-    /// times: Option<Array1<Time>>,
-    /// market_datetime: OffsetDateTime,
-    /// name: String
+    /// Creates a new VectorData instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The vector of numerical values.
+    /// * `dates` - Optional vector of dates corresponding to each value.
+    /// * `times` - Optional vector of times corresponding to each value.
+    /// * `market_datetime` - The market datetime for this data set, if applicable.
+    /// * `currency` - The currency of the values.
+    /// * `name` - A descriptive name for this data set.
+    /// * `id` - A unique identifier for this data set.
+    ///
+    /// # Returns
+    ///
+    /// Returns a Result containing the new VectorData instance or an error.
+    ///
+    /// # Notes
+    ///
+    /// Either `dates` or `times` must be `Some`. If both are `None`, an error will be returned.
     pub fn new(
         value: Array1<Real>,
         dates: Option<Vec<OffsetDateTime>>,

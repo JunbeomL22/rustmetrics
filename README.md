@@ -1,9 +1,76 @@
-# RustMetrics
+# rustmetrics
 
-## A Pricing and risk engine
+`rustmetrics` is a Rust crate for pricing financial instruments and calculating various risk metrics. This crate aims to provide efficient and optimized calculations for a wide range of financial risk measures.
 
+## Features
+
+- Pricing and risk calculation for plain financial instruments:
+  - Bonds
+  - Cross-Currency Swaps (CRS)
+  - Interest Rate Swaps (IRS)
+  - Futures
+  - Vanilla Options
+  - Korea Treasury Bond Futures (KTBF)
+  - FX Swaps
+  - FX Forwards
+  - FX Spots
+
+- Calculation of key risk metrics:
+  - Delta
+  - Gamma
+  - Theta
+  - Vega
+  - Vega Structure
+  - Vega Matrix
+  - Rho
+  - Rho Structure
+  - Dividend Delta
+  - Dividend Structure
+
+## Design Philosophy
+
+The core design of `rustmetrics` focuses on optimizing calculations by reducing repetitive and redundant operations. This is achieved through two main components:
+
+1. **InstrumentCategory**: Categorizes financial instruments based on their characteristics.
+
+2. **EngineGenerator**: Splits instruments into groups and creates specialized engines for each group. This approach significantly reduces duplicate work, such as performing curve bumps only once per engine.
+
+This design provides a solid foundation for future expansions, particularly for implementing numerical simulations like Finite Difference Methods (FDM) and Monte Carlo simulations, where reusing paths and decomposed matrices can lead to substantial performance improvements.
+
+## Current Status
+
+This crate is currently in its first prototype stage. While it can handle basic plain instruments, it is actively under development with plans for expansion and optimization.
+
+## Future Plans
+
+- Implement more complex financial instruments
+- Add support for numerical simulations (FDM, Monte Carlo)
+- Optimize performance for large-scale calculations
+- Expand the range of supported risk metrics
+
+## Contributing
+
+We welcome contributions to `rustmetrics`! If you're interested in improving financial risk calculations or optimizing performance for large-scale operations, we'd love to have your input.
+
+## License
+
+This project is licensed under either of
+
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+## Contact
+
+For questions, suggestions, or contributions, please contact:
+
+Junbeom Lee: junbeoml22@gmail.com
+
+---
+
+We believe this approach has significant potential and look forward to your contributions in making `rustmetrics` a powerful tool for financial risk analysis in Rust.
 ## Overview
-
+For standard examples, see [./tests/engine.rs](./tests/engine.rs)
 ## Crate structure
 
 | Module | Description |
@@ -14,7 +81,7 @@
 | [time](./src/time) | Calendars, conventions, handling holiday |
 | [pricing_engines](./src/pricing_engines) | Engine, EngineGenerator, and Pricer |
 
-| Struct \& Enum | Description |
+| Struct | Description |
 |------- | ----------- |
 |[CalculationConfiguration](./src/pricing_engines/calculation_configuration.rs) | All information for pricing: delta bump ratio, gap days for theta calculation, etc
 | [Pricer](./src/pricing_engines/pricer.rs) | Enum containing pricers for each [Instrument](./src/instrument.rs) |

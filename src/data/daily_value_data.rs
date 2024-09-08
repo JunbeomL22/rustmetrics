@@ -6,13 +6,43 @@ use rustc_hash::FxHashMap;
 use static_id::static_id::StaticId;
 use time::{Date, Time, UtcOffset};
 
+/// Represents daily value data for a specific financial instrument or metric.
+/// This struct encapsulates various attributes related to daily data points,
+/// including the actual values, timing information, and identifiers.
+/// # Example
+/// ```
+/// use rustmetrics::data::daily_value_data::DailyValueData;
+/// use rustmetrics::time::calendar::Calendar;
+/// use rustmetrics::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
+/// let mut data = DailyValueData::default();
+/// let date1 = date!(2021 - 01 - 01);
+/// let date2 = date!(2021 - 01 - 02);
+/// let date3 = date!(2021 - 01 - 03);
+/// data.insert(date1, 100.0);
+/// data.insert(date2, 200.0);
+/// data.insert(date3, 300.0);
+///
+/// assert_eq!(data.get(&date1), Some(&100.0));
+/// assert_eq!(data.get(&date2), Some(&200.0));
+/// assert_eq!(data.get(&date3), Some(&300.0));
+/// let (ordered_datetime, ordered_value) = data.get_ordered_data_by_date();
+/// assert_eq!(ordered_datetime, vec![date1, date2, date3]);
+/// assert_eq!(ordered_value, vec![100.0, 200.0, 300.0]);
+/// ```
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DailyValueData {
+    /// A map of dates to their corresponding real values.
+    /// Each entry represents a daily data point.
     pub value: FxHashMap<Date, Real>,
+    /// The closing time for the daily data points.
     pub close_time: Time,
+    /// The UTC offset for the time zone of the data.
     pub utc_offset: UtcOffset,
+    /// The calendar used for date calculations and business day conventions.
     pub calendar: Calendar,
+    /// The name or description of the data series.
     pub name: String,
+    /// A unique identifier for this data series.
     pub id: StaticId,
 }
 
@@ -98,6 +128,7 @@ impl DailyValueData {
         }
         (ordered_datetime, ordered_value)
     }
+    
 }
 
 #[cfg(test)]

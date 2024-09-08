@@ -7,19 +7,40 @@ use time::OffsetDateTime;
 use static_id::static_id::StaticId;
 use anyhow::Result;
 
+/// Represents a volatility surface data structure, typically used for options pricing.
+/// This structure is particularly useful for storing and manipulating volatility surfaces,
+/// such as the Black-Scholes implied volatility surface for a given underlying asset.
+/// # Example
+/// ```
+/// let surface_data = SurfaceData::test_data(
+/// 100.0, Some(datetime!(2022-04-14 15:40:00 +09:00))).unwrap();
+/// println!("{:?}", surface_data);
+/// ```
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SurfaceData {
+    /// The spot price of the underlying asset.
+    /// This is an Option because the market data's spot price might differ from the valuation spot price.
+    /// If None, the Engine struct will use the spot price at the time of valuation.
     pub spot: Option<Real>,
+    /// A 2D array representing the volatility surface.
+    /// Rows typically correspond to different expiry dates, and columns to different strike prices.
     pub value: Array2<Real>,
+    /// Vector of expiry dates for the volatility surface.
     pub dates: Vec<OffsetDateTime>,
+    /// Array of strike prices for the volatility surface.
     pub strikes: Array1<Real>,
+    /// The currency of the underlying asset.
     pub currency: Currency,
+    /// The datetime when this market data was captured or created.
     pub market_datetime: Option<OffsetDateTime>,
+    /// A name or identifier for this volatility surface.
     pub name: String,
+    /// A unique identifier for this surface data.
     pub id: StaticId,
 }
 
 impl SurfaceData {
+    /// Creates a new SurfaceData instance.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         spot: Option<Real>,

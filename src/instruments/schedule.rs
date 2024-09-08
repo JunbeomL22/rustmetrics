@@ -9,20 +9,50 @@ use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, ops::Index};
 use time::{Duration, OffsetDateTime};
 
-/// if the amount is None, the pricer calculate the coupon amount.
+/// A single base schudule for a coupon for bonds, IRS, etc.
+/// If the amount is None, the pricer calculate the coupon amount.
 /// Otherwise, the amount is used as the coupon amount.
 /// This is useful if the user wants to calculate the coupon amount
 /// in the IO section, e.g., serialization, deserialization, etc.
+/// The user can set the amount to None and calculate the coupon amount
+/// in the pricer.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, PartialOrd)]
 pub struct BaseSchedule {
-    fixing_date: OffsetDateTime,
-    calc_start_date: OffsetDateTime,
-    calc_end_date: OffsetDateTime,
-    payment_date: OffsetDateTime,
-    amount: Option<Real>, // if None, pricer calculate the coupon amount
+    /// The fixing date for the coupon
+    pub fixing_date: OffsetDateTime,
+    /// The start date for the coupon
+    pub calc_start_date: OffsetDateTime,
+    /// The end date for the coupon
+    pub calc_end_date: OffsetDateTime,
+    /// The payment date for the coupon
+    pub payment_date: OffsetDateTime,
+    /// The coupon amount
+    pub amount: Option<Real>, // if None, pricer calculate the coupon amount
 }
 
 impl BaseSchedule {
+    /// Creates a new BaseSchedule instance.
+    /// # Arguments
+    /// * `fixing_date` - The fixing date for the coupon
+    /// * `calc_start_date` - The start date for the coupon
+    /// * `calc_end_date` - The end date for the coupon
+    /// * `payment_date` - The payment date for the coupon
+    /// * `amount` - The coupon amount
+    /// # Example
+    /// ```
+    /// let fixing_date = datetime!(2023-01-31 16:30:00 +09:00);
+    /// let calc_start_date = datetime!(2023-04-28 16:30:00 +09:00);
+    /// let calc_end_date = datetime!(2023-07-31 16:30:00 +09:00);
+    /// let payment_date = datetime!(2023-10-31 16:30:00 +09:00);
+    /// let amount = Some(100.0);
+    /// let base_schedule = BaseSchedule::new(
+    ///    fixing_date,
+    ///    calc_start_date,
+    ///    calc_end_date,
+    ///    payment_date,
+    ///    amount,
+    /// );
+    /// ```
     pub fn new(
         fixing_date: OffsetDateTime,
         calc_start_date: OffsetDateTime,
@@ -60,8 +90,53 @@ impl BaseSchedule {
     }
 }
 
+/// A group of BaseSchedule for a coupon for bonds, IRS, etc.
+/// # Example
+/// ```
+/// use crate::time::calendar::Calendar;
+/// use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
+/// use time::macros::{date, datetime};
+/// 
+/// let effective_date = datetime!(2023-01-31 16:30:00 +09:00);
+/// let maturity = datetime!(2024-07-31 16:30:00 +09:00);
+/// let cal = SouthKorea::new(SouthKoreaType::Settlement);
+/// let calendar = Calendar::SouthKorea(cal);
+/// let joint_calendar = JointCalendar::new(vec![calendar])?;
+/// let schedule = build_schedule(
+///    true,
+///    &effective_date,
+///    &maturity,
+///    &joint_calendar,
+///    &BusinessDayConvention::ModifiedFollowing,
+///    &PaymentFrequency::Quarterly,
+///    1,
+///    0,
+/// ).expect("Failed to build schedule");
+///
+/// for base_schedule in schedule.iter() {
+///    println!(
+///        "start = {:?}, end = {:?}",
+///        base_schedule.get_calc_start_date().date(),
+///        base_schedule.get_calc_end_date().date()
+///    );
+/// }
+///
+/// // start = 2023-01-31, end = 2023-04-28
+/// // start = 2023-04-28, end = 2023-07-31
+/// // start = 2023-07-31, end = 2023-10-31
+/// // start = 2023-10-31, end = 2024-01-31
+/// // start = 2024-01-31, end = 2024-04-30
+/// // start = 2024-04-30, end = 2024-07-31
+/// assert_eq!(schedule[0].get_calc_start_date().date(), date!(2023 - 01 - 31));
+/// assert_eq!(schedule[1].get_calc_start_date().date(), date!(2023 - 04 - 28));
+/// assert_eq!(schedule[2].get_calc_start_date().date(),date!(2023 - 07 - 31));
+/// assert_eq!(schedule[3].get_calc_start_date().date(), date!(2023 - 10 - 31));
+/// assert_eq!(schedule[4].get_calc_start_date().date(), date!(2024 - 01 - 31));
+/// assert_eq!(schedule[5].get_calc_start_date().date(), date!(2024 - 04 - 30));
+/// ```
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, PartialOrd, Default)]
 pub struct Schedule {
+    /// A list of BaseSchedule for a coupon for bonds, IRS, etc.
     data: Vec<BaseSchedule>,
 }
 
@@ -83,6 +158,10 @@ impl<'a> IntoIterator for &'a Schedule {
 }
 
 impl Schedule {
+    /// Creates a new Schedule instance.
+    /// # Arguments
+    /// * `data` - A vector of BaseSchedule for a coupon for bonds, IRS, etc.
+    /// # Example
     pub fn new(data: Vec<BaseSchedule>) -> Self {
         Schedule { data }
     }
