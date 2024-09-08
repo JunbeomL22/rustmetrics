@@ -6,14 +6,13 @@ authors = ["Junbeom Lee <junbeoml22@gmail.com>"]
 description = "A pricing and risk engine for Rust"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/JunbeomL22/flashlog"
+keywords = ["pricing", "pricer", "risk-engine", "risk", "finance", "derivatives", "quant", "quantitative-finance"]
 
 [lib]
 name = "rustmetrics"
 path = "src/lib.rs"
 
 [dependencies]
-#regex = "1.10" 
-#ndarray-linalg = { version = "0.16", features = ["openblas"] } 
 anyhow = "1.0.87" 
 thiserror = "1.0"
 time = { version = "0.3", features = ["macros", "serde", "formatting", "parsing"] }
