@@ -87,7 +87,7 @@ mod tests {
         InstType,
         AccountingLevel,
     };
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
     use time::macros::datetime;
 
     #[test]

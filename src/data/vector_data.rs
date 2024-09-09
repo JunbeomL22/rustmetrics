@@ -3,7 +3,7 @@ use crate::definitions::{Real, Time};
 use crate::time::{calendar_trait::CalendarTrait, calendars::nullcalendar::NullCalendar};
 use std::fmt;
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use anyhow::{anyhow, Result};
 use ndarray::Array1;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,10 @@ use serde::{Deserialize, Serialize};
 /// /// # Example
 ///
 /// ```
-/// use super::*;
+/// use rustmetrics::data::vector_data::VectorData;
+/// use rustmetrics::currency::Currency;
+/// 
+/// use static_id::StaticId;
 /// use ndarray::array;
 /// use serde_json;
 ///

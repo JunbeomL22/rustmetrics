@@ -8,7 +8,7 @@ use crate::enums::{
 use crate::instrument::{Instrument, InstrumentTrait};
 use crate::instruments::plain_swap::PlainSwapType;
 //
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;

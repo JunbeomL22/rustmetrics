@@ -626,7 +626,7 @@ mod tests {
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};
     use time::macros::datetime;
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
 
     #[test]
     fn test_crs() -> Result<()> {
@@ -646,7 +646,7 @@ mod tests {
         let fx_rate = 1_330.0;
         let tenor = crate::Tenor::new(0, 3, 0);
         let curve_tenor = tenor.clone();
-        let id = static_id::static_id::StaticId::from_str("USD Libor 3M", "KRX");
+        let id = static_id::StaticId::from_str("USD Libor 3M", "KRX");
 
         let rate_index = RateIndex::new(
             id,
@@ -660,7 +660,7 @@ mod tests {
         let last_fixed_side_payment = Some(fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
-        let id = static_id::static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
+        let id = static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
         
 
         let inst_info = crate::InstInfo::new(
@@ -791,7 +791,7 @@ mod tests {
         let last_fixed_side_payment = Some(last_fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
-        let id = static_id::static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
+        let id = static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
         let inst_info = crate::InstInfo::new(
             id,
             "MockFxSwap".to_string(),
@@ -893,7 +893,7 @@ mod tests {
         let last_fixed_side_payment = Some(fx_rate);
         let last_floating_side_endorsement = Some(1.0);
 
-        let id = static_id::static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
+        let id = static_id::StaticId::from_str("PlainSwap:XXX", "KRX");
 
         let inst_info = crate::InstInfo::new(
             id,

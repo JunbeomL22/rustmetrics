@@ -15,7 +15,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use rustc_hash::FxHashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

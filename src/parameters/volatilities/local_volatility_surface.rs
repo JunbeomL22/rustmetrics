@@ -18,8 +18,83 @@ use std::{cell::RefCell, rc::Rc};
 //
 use ndarray::{Array1, Array2};
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
+/// Represents a local volatility surface for equity or other underlying assets.
+///
+/// This struct provides methods to initialize, build, and query a local volatility surface
+/// based on market implied volatility data or a constant volatility.
+///
+/// # Features
+/// - Supports initialization from market surface data or constant volatility
+/// - Handles different stickiness types (StickyToMoneyness, StickyToStrike)
+/// - Provides interpolation for implied volatility values
+/// - Supports volatility bumping for sensitivity analysis
+///
+/// # Examples
+///
+/// ```
+/// use your_crate::{
+///     LocalVolatilitySurface, EvaluationDate, MarketPrice, ZeroCurve, SurfaceData,
+///     StickynessType, VolatilityInterplator, Tenor, Currency, StaticId
+/// };
+/// use std::rc::Rc;
+/// use std::cell::RefCell;
+/// use ndarray::Array1;
+/// use time::macros::datetime;
+///
+/// let eval_date = datetime!(2024-01-02 00:00:00 +09:00);
+/// let spot = 350.0;
+///
+/// // Initialize required components
+/// let equity = Rc::new(RefCell::new(MarketPrice::new(
+///     spot, eval_date, None, Currency::KRW, "KOSPI2".to_string(),
+///     StaticId::from_str("KOSPI2", "KRX")
+/// )));
+/// let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_date)));
+/// let zero_curve = Rc::new(RefCell::new(ZeroCurve::new(/* ... */)?));
+///
+/// // Create surface data (you would typically load this from market data)
+/// let surface_data = SurfaceData::test_data(spot, Some(eval_date))?;
+///
+/// // Initialize LocalVolatilitySurface
+/// let mut local_volatility_surface = LocalVolatilitySurface::initialize(
+///     evaluation_date.clone(),
+///     equity.clone(),
+///     zero_curve.clone(),
+///     zero_curve.clone(),
+///     StickynessType::default(),
+///     VolatilityInterplator::AndreasenHuge(AndreasenHuge::default()),
+///     "local vol".to_string(),
+///     StaticId::from_str("local vol", "KRX"),
+/// );
+///
+/// // Define vega structure and moneyness grid
+/// let vega_structure_tenors = vec![
+///     Tenor::new_from_string("1M")?,
+///     Tenor::new_from_string("2M")?,
+///     // ... add more tenors as needed
+/// ];
+/// let vega_spot_moneyness = Array1::linspace(0.6, 1.4, 17);
+///
+/// // Build the surface
+/// local_volatility_surface = local_volatility_surface.with_market_surface(
+///     &surface_data,
+///     vega_structure_tenors,
+///     vega_spot_moneyness,
+/// )?;
+/// local_volatility_surface.build()?;
+///
+/// // Query volatility
+/// let vol = local_volatility_surface.get_value(0.5, 1.0);
+///
+/// // Bump volatility for sensitivity analysis
+/// local_volatility_surface.bump_volatility(Some(2.0), None, None, None, 0.01)?;
+/// ```
+///
+/// This struct provides methods to create, manipulate, and query local volatility surfaces,
+/// which are essential for pricing and risk management of equity derivatives and other
+/// financial instruments.
 #[derive(Clone, Debug)]
 pub struct LocalVolatilitySurface {
     interpolated_imvol: Array2<Real>,
@@ -516,7 +591,7 @@ mod tests {
             None,
             Currency::KRW,
             "KOSPI2".to_string(),
-            static_id::static_id::StaticId::from_str("KOSPI2", "KRX"),
+            static_id::StaticId::from_str("KOSPI2", "KRX"),
         )));
         let evaluation_date = Rc::new(RefCell::new(EvaluationDate::new(eval_date.clone())));
 
@@ -535,7 +610,7 @@ mod tests {
 
         //println!("vector_data: {:?}", dummy_data);
         //println!("surface_data: {:?}", surface_data);
-        let vol_id = static_id::static_id::StaticId::from_str("local vol", "KRX");
+        let vol_id = static_id::StaticId::from_str("local vol", "KRX");
         let mut local_volatility_surface = LocalVolatilitySurface::initialize(
             evaluation_date.clone(),
             equity.clone(),

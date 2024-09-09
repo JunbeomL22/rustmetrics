@@ -23,7 +23,7 @@ use crate::parameters::{
 use crate::pricing_engines::match_parameter::MatchParameter;
 use crate::time::{conventions::PaymentFrequency, jointcalendar::JointCalendar};
 //
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use anyhow::{anyhow, Context, Result};
 use enum_dispatch::enum_dispatch;
 use std::{
@@ -240,12 +240,72 @@ pub enum Instrument {
     Cash(Cash),
 }
 
-/// calculation groups for calculation optimization,
-/// On the group, again select calculation sets based on currency and underlying assets (not sub|superset, exact the same assets)
-/// currency and underlying_assets categorization
-/// GROUP1: Vec<&'static str> = vec!["StockFutures"];
-/// GROUP2: Vec<&'static str> = vec!["FixedCouponBond", "BondFutures", "KTBF"];
-/// GROUP3: Vec<&'static str> = vec!["StructuredProduct"];
+/// A collection of financial instruments for calculation optimization.
+///
+/// The `Instruments` struct allows grouping and efficient querying of various financial
+/// instruments such as futures, swaps, and options. It provides methods to filter and
+/// retrieve instruments based on different criteria like underlying assets, currencies,
+/// maturities, and associated curves.
+///
+/// # Examples
+///
+/// ```
+/// use rustmetrics::{Instruments, Instrument, Currency};
+/// use rustmetrics::instruments::futures::Futures;
+/// use rustmetrics::instruments::plain_swap::PlainSwap;
+/// use rustmetrics::pricing_engines::match_parameter::MatchParameter;
+/// 
+/// use std::rc::Rc;
+/// use static_id::StaticId;
+/// use anyhow::Result;
+///
+/// // Create individual instruments (futures and swaps)
+/// let fut1 = Futures::new(/* ... */);
+/// let fut2 = Futures::new(/* ... */);
+/// let irs = PlainSwap::new_from_conventions(/* ... */)?;
+/// let match_parameter = MatchParameter::new(/* ... */);
+///
+/// // Create an Instruments collection
+/// let instruments = Instruments::new(vec![
+///     Rc::new(Instrument::Futures(fut1)),
+///     Rc::new(Instrument::Futures(fut2)),
+///     Rc::new(Instrument::PlainSwap(irs)),
+/// ]);
+///
+/// // Get all underlying asset IDs
+/// let underlying_ids = instruments.get_all_underlying_ids();
+///
+/// // Get instruments with a specific underlying
+/// let kospi2_instruments = instruments.instruments_with_underlying(
+///     StaticId::from_str("KOSPI2", "KRX"),
+///     None
+/// );
+///
+/// // Get instruments using a specific curve
+/// let krw_gov_instruments = instruments.instruments_using_curve(
+///     StaticId::from_str("KRWGOV", "KAP"),
+///     &match_parameter,
+///     None
+/// )?;
+///
+/// // Get instruments with a specific currency
+/// let krw_instruments = instruments.instruments_with_currency(Currency::KRW);
+///
+/// // Get instruments of a specific type
+/// let futures_instruments = instruments.instruments_with_types(vec!["Futures"]);
+///
+/// // Get instruments with maturity up to a certain date
+/// let short_term_instruments = instruments.instruments_with_maturity_upto(
+///     None,
+///     &datetime!(2022-12-01 09:00:00 UTC),
+///     None
+/// );
+/// Ok::<(), anyhow::Error>(())
+/// ```
+///
+/// This struct provides various methods to query and filter the instruments based on
+/// different criteria, making it easier to manage and analyze a large collection of
+/// financial instruments.
 #[derive(Clone, Debug, Default)]
 pub struct Instruments {
     instruments: Vec<Rc<Instrument>>,

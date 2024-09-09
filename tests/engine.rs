@@ -39,7 +39,7 @@ mod tests {
     use std::rc::Rc;
     use time::{macros::datetime, Duration};
     use flashlog::{info, get_unix_nano};
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
 
     #[test]
     fn test_engine() -> Result<()> {

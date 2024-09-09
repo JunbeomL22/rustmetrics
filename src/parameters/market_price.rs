@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 use std::rc::Rc;
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use flashlog::{
     log_debug,
     lazy_string::LazyString,
@@ -26,14 +26,6 @@ pub struct MarketPrice {
 }
 
 impl MarketPrice {
-    /// new(
-    /// last_price: Real,
-    /// market_datetime: OffsetDateTime,
-    /// dividend: Option<DiscreteRatioDividend>,
-    /// currency: Currency,
-    /// name: String,
-    /// code: String,
-    /// )
     pub fn new(
         value: Real,
         market_datetime: OffsetDateTime,

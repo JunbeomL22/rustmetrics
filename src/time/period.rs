@@ -7,9 +7,21 @@ use crate::utils::string_arithmetic::{
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use time::{Date, OffsetDateTime};
-
 pub type Tenor = Period;
 
+/// Represents a time period with years, months, and days.
+///
+/// # Example
+///
+/// ```
+/// use rustmetrics::Period;
+/// use time::macros::datetime;
+///
+/// let period = Period::new(1, 2, 3); // 1 year, 2 months, 3 days
+/// let datetime = datetime!(2023-12-31 00:00:00 +09:00);
+/// let new_datetime = period.apply(&datetime);
+/// assert_eq!(new_datetime.to_string(), "2025-03-03 00:00:00.0 +09:00");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Period {
     years: i32,
@@ -24,6 +36,7 @@ impl std::fmt::Display for Period {
 }
 
 impl Period {
+     /// Creates a new Period with the specified years, months, and days.
     pub fn new(years: i32, months: i32, days: i32) -> Period {
         Period {
             years,
@@ -32,12 +45,18 @@ impl Period {
         }
     }
 
-    /// "1Y" -> Period(1, 0, 0, 0)
-    /// "1M" -> Period(0, 1, 0, 0)
-    /// "1W" -> Period(0, 0, 7, 0)
-    /// "1D" -> Period(0, 0, 1, 0)
-    /// "1h" -> Period(0, 0, 0, 1)
-    /// "1Y1M1W1D1h" -> Period(1, 1, 8, 1)
+     /// Creates a new Period from a string representation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rustmetrics::Period;
+    ///
+    /// let period = Period::new_from_string("1Y2M3D").unwrap();
+    /// assert_eq!(period.years(), 1);
+    /// assert_eq!(period.months(), 2);
+    /// assert_eq!(period.days(), 3);
+    /// ```
     pub fn new_from_string(tenor: &str) -> Result<Period> {
         let mut years = 0;
         let mut months = 0;
@@ -90,6 +109,21 @@ impl Period {
         self.days
     }
 
+     // Getter methods...
+
+    /// Applies the year component of the Period to the given datetime.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rustmetrics::Period;
+    /// use time::macros::datetime;
+    ///
+    /// let period = Period::new(2, 0, 0);
+    /// let datetime = datetime!(2023-12-31 00:00:00 +09:00);
+    /// let new_datetime = period.apply_year(&datetime);
+    /// assert_eq!(new_datetime.year(), 2025);
+    /// ```
     pub fn apply_year(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         if self.years == 0 {
             *datetime
@@ -115,6 +149,19 @@ impl Period {
         } 
     }
 
+    /// Applies the month component of the Period to the given datetime.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rustmetrics::Period;
+    /// use time::macros::datetime;
+    ///
+    /// let period = Period::new(0, 14, 0);
+    /// let datetime = datetime!(2023-12-31 00:00:00 +09:00);
+    /// let new_datetime = period.apply_month(&datetime);
+    /// assert_eq!(new_datetime.to_string(), "2025-02-28 00:00:00.0 +09:00");
+    /// ```
     pub fn apply_month(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         if self.months == 0 {
             *datetime
@@ -146,6 +193,19 @@ impl Period {
         }
     }
 
+    /// Applies the day component of the Period to the given datetime.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rustmetrics::Period;
+    /// use time::macros::datetime;
+    ///
+    /// let period = Period::new(0, 0, 35);
+    /// let datetime = datetime!(2023-12-31 00:00:00 +09:00);
+    /// let new_datetime = period.apply_day(&datetime);
+    /// assert_eq!(new_datetime.to_string(), "2024-02-04 00:00:00.0 +09:00");
+    /// ```
     pub fn apply_day(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         if self.days == 0 {
             *datetime
@@ -162,6 +222,19 @@ impl Period {
         }
     }
 
+    /// Applies the entire Period to the given datetime.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rustmetrics::Period;
+    /// use time::macros::datetime;
+    ///
+    /// let period = Period::new(1, 1, 1);
+    /// let datetime = datetime!(2023-12-31 00:00:00 +09:00);
+    /// let new_datetime = period.apply(&datetime);
+    /// assert_eq!(new_datetime.to_string(), "2025-02-01 00:00:00.0 +09:00");
+    /// ```
     pub fn apply(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         let mut new_datetime = self.apply_year(datetime);
         new_datetime = self.apply_month(&new_datetime);
@@ -170,6 +243,21 @@ impl Period {
     }
 }
 
+
+/// Represents a more granular time period, including hours, minutes, milliseconds, and nanoseconds.
+///
+/// # Example
+///
+/// ```
+/// use rustmetrics::{Period, FinerPeriod};
+/// use time::macros::datetime;
+///
+/// let period = Period::new(1, 2, 3);
+/// let finer_period = FinerPeriod::new(period, 4, 5, 6, 7);
+/// let datetime = datetime!(2023-12-31 00:00:00 +09:00);
+/// let new_datetime = finer_period.apply(&datetime);
+/// assert_eq!(new_datetime.to_string(), "2025-03-03 04:05:00.006000007 +09:00");
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct FinerPeriod {
     period: Period,
@@ -190,6 +278,7 @@ impl FinerPeriod {
         }
     }
 
+    /// Applies the FinerPeriod to the given datetime.
     pub fn apply(&self, datetime: &OffsetDateTime) -> OffsetDateTime {
         let mut new_datetime = self.period.apply(datetime);
         new_datetime += time::Duration::hours(self.hours as i64);
@@ -242,6 +331,24 @@ impl FinerPeriod {
         self.nano_seconds
     }
 
+        // Getter methods...
+
+    /// Creates a new FinerPeriod from a string representation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rustmetrics::FinerPeriod;
+    ///
+    /// let finer_period = FinerPeriod::new_from_string("1Y2M3D4h5m6s7l8u9n").unwrap();
+    /// assert_eq!(finer_period.period().years(), 1);
+    /// assert_eq!(finer_period.period().months(), 2);
+    /// assert_eq!(finer_period.period().days(), 3);
+    /// assert_eq!(finer_period.hours(), 4);
+    /// assert_eq!(finer_period.minutes(), 5);
+    /// assert_eq!(finer_period.milli_seconds(), 6007);
+    /// assert_eq!(finer_period.nano_seconds(), 8009);
+    /// ```
     pub fn new_from_string(val: &str) -> Result<Self> {
         let mut period = Period::default();
         let mut hours = 0;

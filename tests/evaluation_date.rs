@@ -9,7 +9,7 @@ mod tests {
     use rustmetrics::evaluation_date::EvaluationDate;
     use rustmetrics::parameters::discrete_ratio_dividend::DiscreteRatioDividend;
     use rustmetrics::parameters::zero_curve::ZeroCurve;
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
     use std::cell::RefCell;
     use std::rc::Rc;
     use time;

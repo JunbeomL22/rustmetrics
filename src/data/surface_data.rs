@@ -4,7 +4,7 @@ use crate::Tenor;
 use ndarray::{Array1, Array2};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use anyhow::Result;
 
 /// Represents a volatility surface data structure, typically used for options pricing.
@@ -12,6 +12,9 @@ use anyhow::Result;
 /// such as the Black-Scholes implied volatility surface for a given underlying asset.
 /// # Example
 /// ```
+/// use rustmetrics::data::surface_data::SurfaceData;
+/// use time::macros::datetime;
+/// 
 /// let surface_data = SurfaceData::test_data(
 /// 100.0, Some(datetime!(2022-04-14 15:40:00 +09:00))).unwrap();
 /// println!("{:?}", surface_data);

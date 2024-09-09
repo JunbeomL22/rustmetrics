@@ -2,8 +2,24 @@ use crate::definitions::{Real, Time};
 use crate::parameters::volatility::VolatilityTrait;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use static_id::static_id::StaticId;
-//
+use static_id::StaticId;
+
+/// Constant volatility model.
+/// # Parameters
+/// * `value` - The constant volatility value.
+/// * `name` - The name of the volatility model.
+/// * `id` - The static id of the volatility model.
+/// # Example
+/// ```
+/// use rustmetrics::parameters::volatilities::constant_volatility::ConstantVolatility;
+/// use rustmetrics::parameters::volatility::VolatilityTrait;
+/// use rustmetrics::definitions::Real;
+/// use static_id::StaticId;
+/// 
+/// let vol = ConstantVolatility::new(0.2, "Volatility".to_string(), StaticId::default());
+/// // he argument in get_value (time and asset value) is not used in this model. 
+/// assert_eq!(vol.get_value(0.0, 0.0), 0.2); 
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConstantVolatility {
     value: Real,

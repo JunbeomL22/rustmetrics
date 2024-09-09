@@ -50,7 +50,13 @@ This crate is currently in its first prototype stage. While it can handle basic 
 
 ## Contributing
 
-We welcome contributions to `rustmetrics`! If you're interested in improving financial risk calculations or optimizing performance for large-scale operations, we'd love to have your input.
+We welcome all contributions! Whether it's comments, minor changes, or structural code modifications, we're eager to review your input. Here's how you can contribute:
+
+- Open an issue for any bugs you find or features you'd like to see.
+- Submit a pull request for any improvements you've made.
+- Provide feedback on existing issues and pull requests.
+
+No contribution is too small, and all input is valued. Let's work together to make this project even better!
 
 ## License
 

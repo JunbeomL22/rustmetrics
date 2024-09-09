@@ -40,7 +40,7 @@ use rustc_hash::{
     FxHashSet,
 };
 use time::{Duration, OffsetDateTime};
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use flashlog;
 
 /// Engine typically handles a bunch of instruments and calculate the pricing of the instruments.

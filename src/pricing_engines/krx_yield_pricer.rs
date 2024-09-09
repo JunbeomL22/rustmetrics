@@ -14,7 +14,7 @@ use argmin::solver::linesearch::MoreThuenteLineSearch;
 use std::{cell::RefCell, rc::Rc};
 
 /// 금융투자회사의 영업 및 업무에 관한 규정 별표 14
-/// https://law.kofia.or.kr/service/law/lawFullScreenContent.do?seq=136&historySeq=263
+/// <https://law.kofia.or.kr/service/law/lawFullScreenContent.do?seq=136&historySeq=263>
 #[derive(Debug, Clone)]
 pub struct KrxYieldPricer {
     evaluation_date: Rc<RefCell<EvaluationDate>>,
@@ -194,7 +194,7 @@ mod tests {
     use crate::instruments::bond::BondInfo;
     use time::macros::datetime;
     use time::Duration;
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
 
     #[test]
     fn test_krx_yield_pricer() -> Result<()> {

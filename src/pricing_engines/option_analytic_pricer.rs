@@ -145,7 +145,7 @@ pub mod test {
     use ndarray::Array1;
     use std::{cell::RefCell, rc::Rc};
     use time::macros::datetime;
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
     use crate::Tenor;
 
     #[test]

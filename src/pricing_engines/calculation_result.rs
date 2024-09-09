@@ -8,20 +8,36 @@ use ndarray::Array2;
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
 /// CalculationResult is a struct that holds the result of the calculation.
 /// It is used to store the result of the calculation of the pricing engine.
 /// instrument: InstrumentInfo
 /// evaluation_date: OffsetDateTime
 ///
-/// npv: Option<Real>: Net Present Value:
+/// npv: ```Option<Real>```: Net Present Value:
 /// exclude cashflow at evaluation date, not considering unit_notional
-/// value: Option<Real>:
+/// value: ```Option<Real>```:
 /// Value of the instrument considering unit_notional excluding cashflow at evaluation date
 /// mostly pnl -> value_2 - value_1 +cashflow_inbetween
 /// all greeks are calculated based on value not the npv in other words, considering unit_notional
-/// fx_exposure: Option<Real>:
+/// fx_exposure: ```Option<Real>```:
+/// 
+/// # Example
+/// ```
+/// use rustmetrics::pricing_engines::calculation_result::CalculationResult;
+/// use rustmetrics::Currency;
+/// use rustmetrics::definitions::Real;
+/// use rustmetrics::InstInfo;
+/// use time::macros::datetime;
+/// use rustmetrics::pricing_engines::npv_result::NpvResult;
+/// 
+/// let instinfo = InstInfo::default();
+/// let evaluation_date = datetime!(2021-01-01 00:00:00 +00:00);
+/// let mut result = CalculationResult::new(instinfo, evaluation_date);
+/// result.set_npv(NpvResult::new_from_npv(100.0));
+/// assert_eq!(result.get_npv_result().unwrap().get_npv(), 100.0);
+/// ```
 #[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct CalculationResult {
     instrument_info: Option<InstInfo>,

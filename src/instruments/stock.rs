@@ -1,4 +1,4 @@
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use crate::definitions::Real;
 use crate::enums::StockRankType;
 use crate::instrument::InstrumentTrait;

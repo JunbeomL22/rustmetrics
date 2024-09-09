@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
 /// Represents constant variable data such as volatility, stock price, or other financial metrics.
 /// This struct encapsulates various attributes related to a single data point,
@@ -13,8 +13,8 @@ use static_id::static_id::StaticId;
 /// # Example
 ///
 /// ```
-/// use crate::currency::Currency;
-/// use crate::data::value_data::ValueData;
+/// use rustmetrics::Currency;
+/// use rustmetrics::data::value_data::ValueData;
 /// use static_id::StaticId;
 ///
 /// let value_data = ValueData::new(

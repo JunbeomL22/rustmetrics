@@ -5,7 +5,31 @@ use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-
+/// Creates a new JointCalendar with the specified calendars.
+/// # Example
+/// ```rust
+/// use rustmetrics::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
+/// use rustmetrics::time::calendars::unitedstates::{UnitedStates, UnitedStatesType};
+/// use rustmetrics::time::calendar::Calendar;
+/// use rustmetrics::time::calendar_trait::CalendarTrait;
+/// use rustmetrics::time::jointcalendar::JointCalendar;
+/// use time::macros::datetime;
+/// use anyhow::Result;
+/// 
+/// let us = UnitedStates::new(UnitedStatesType::Settlement);
+/// let us_cal = Calendar::UnitedStates(us);
+/// 
+/// let sk = SouthKorea::new(SouthKoreaType::Settlement);
+/// let sk_cal = Calendar::SouthKorea(sk);
+/// 
+/// let joint_calendar = JointCalendar::new(vec![us_cal, sk_cal])?;
+/// 
+/// let date = datetime!(2021-05-05 00:00:00 +09:00);
+/// assert_eq!(joint_calendar.is_holiday(&date), true);
+/// assert_eq!(joint_calendar.is_business_day(&date), false);
+/// 
+/// # Ok::<(), anyhow::Error>(())
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct JointCalendar {
     name: String,
@@ -24,6 +48,8 @@ impl Default for JointCalendar {
 }
 
 impl JointCalendar {
+    /// # Arguments
+    /// * `calendars` - A vector of calendars to be joined.
     pub fn new(calendars: Vec<Calendar>) -> Result<JointCalendar> {
         if calendars.is_empty() {
             return Err(anyhow!(

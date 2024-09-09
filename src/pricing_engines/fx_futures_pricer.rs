@@ -15,7 +15,7 @@ use std::{
 use rustc_hash::FxHashMap;
 
 /// evaluation date is not needed for this pricer
-/// all parameters have the evaluation date (shared in the form of Rc<RefCell<EvaluationDate>>)
+/// all parameters have the evaluation date (shared in the form of ```Rc<RefCell<EvaluationDate>>```).
 pub struct FxFuturesPricer {
     //evaluation_date: Rc<RefCell<EvaluationDate>>, //not used
     fx: Rc<RefCell<MarketPrice>>, // floationg to fixed fx as in PlainSwapPricer.
@@ -127,7 +127,7 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
     use time::macros::datetime;
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
 
     #[test]
     fn test_fx_futures_pricer() -> Result<()> {

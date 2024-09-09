@@ -209,7 +209,7 @@ pub mod tests {
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};
     use time::{macros::datetime, Duration};
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
 
     #[test]
     fn test_crs_pricer() -> Result<()> {

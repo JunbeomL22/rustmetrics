@@ -7,7 +7,7 @@ use crate::InstInfo;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 //
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VanillaOption {

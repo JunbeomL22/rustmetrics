@@ -3,6 +3,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use time::{Date, OffsetDateTime};
 
+/// A calendar that does not have any holiday.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct NullCalendar {
     name: String,

@@ -3,7 +3,7 @@ use crate::time::calendar::Calendar;
 use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
 use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashMap;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use time::{Date, Time, UtcOffset};
 
 /// Represents daily value data for a specific financial instrument or metric.
@@ -14,6 +14,8 @@ use time::{Date, Time, UtcOffset};
 /// use rustmetrics::data::daily_value_data::DailyValueData;
 /// use rustmetrics::time::calendar::Calendar;
 /// use rustmetrics::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
+/// use time::macros::date;
+/// 
 /// let mut data = DailyValueData::default();
 /// let date1 = date!(2021 - 01 - 01);
 /// let date2 = date!(2021 - 01 - 02);

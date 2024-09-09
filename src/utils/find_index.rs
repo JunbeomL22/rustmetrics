@@ -1,7 +1,7 @@
 /// Binary search for the index of a value in a sorted vector.
 /// vec: The vector to search.
 /// value: The value to search for.
-/// Returns the index of the value in the vector such that vec[index] <= value < vec[index+1].
+/// Returns the index of the value in the vector such that ```vec[index] <= value < vec[index+1]```.
 /// If the value is less than the first element, 0 is returned.
 /// If the value is greater than or equal to the last element, the index of the last element is returned.
 /// # Example

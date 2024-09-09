@@ -48,6 +48,13 @@ pub fn to_yyyymmdd_int(dt: &OffsetDateTime) -> Integer {
     year * 10000 + month * 100 + day
 }
 
+/// Formats a duration in seconds to a human-readable string.
+/// # Examples
+/// ```
+/// use rustmetrics::util::format_duration;
+/// assert_eq!(format_duration(65.0), "1m 05.00s");
+/// assert_eq!(format_duration(0.5), "0.50s");
+/// ```
 pub fn format_duration(secs: f64) -> String {
     let minutes = (secs / 60.0).floor();
     let seconds = secs % 60.0;

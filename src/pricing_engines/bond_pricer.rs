@@ -11,8 +11,8 @@ use std::{cell::RefCell, rc::Rc};
 use time::OffsetDateTime;
 use rustc_hash::FxHashMap;
 
-/// forward_curve (Optional<Rc<RefCell<ZeroCurve>>>): forward curve for floating rate bond, so it is optional
-/// past_fixing_data (Optional<Rc<CloseData>>): past fixing data for floating rate bond, so it is optional
+/// forward_curve (```Optional<Rc<RefCell<ZeroCurve>>>```): forward curve for floating rate bond, so it is optional
+/// past_fixing_data (```Optional<Rc<CloseData>>```): past fixing data for floating rate bond, so it is optional
 pub struct BondPricer {
     evaluation_date: Rc<RefCell<EvaluationDate>>,
     discount_curve: Rc<RefCell<ZeroCurve>>,
@@ -141,7 +141,7 @@ mod tests {
     };
     use crate::instruments::bond::BondInfo;
     //
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
     use anyhow::Result;
     use ndarray::array;
     use std::{cell::RefCell, rc::Rc};

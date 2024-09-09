@@ -11,14 +11,14 @@ use static_id::StaticId;
 
 /// Instrument information.
 /// # Arguments
-/// * `id` - (static_id::StaticId) A unique identifier for the instrument 
-/// * `name` - (String) The name of the instrument
-/// * `inst_type` - (InstType) The type of instrument
-/// * `currency` - (Currency) The currency of the instrument
-/// * `unit_notional` - (Real) The unit notional value of the instrument
-/// * `issue_date` - (Option<OffsetDateTime>) The issue date of the instrument
-/// * `maturity` - (Option<OffsetDateTime>) The maturity date of the instrument
-/// * `accounting_level` - (AccountingLevel) The accounting level of the instrument
+/// * `id` - A unique identifier for the instrument 
+/// * `name` - The name of the instrument
+/// * `inst_type` - The type of instrument
+/// * `currency` - The currency of the instrument
+/// * `unit_notional` - The unit notional value of the instrument
+/// * `issue_date` - The issue date of the instrument
+/// * `maturity` - The maturity date of the instrument
+/// * `accounting_level` - The accounting level of the instrument
 /// # Example
 /// ```
 /// use serde_json;

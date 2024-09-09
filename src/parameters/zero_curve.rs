@@ -17,7 +17,7 @@ use ndarray::{array, Array1};
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
 #[derive(Clone, Debug)]
 enum ZeroCurveInterpolator {

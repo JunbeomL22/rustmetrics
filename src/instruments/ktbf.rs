@@ -2,13 +2,14 @@ use crate::definitions::{Integer, Real};
 use crate::instrument::InstrumentTrait;
 use crate::instruments::bond::Bond;
 use crate::time::conventions::PaymentFrequency;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 //
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use crate::InstInfo;
 
+/// The virtual bond that is used to calculate KTBF price.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KtbfVirtualBond {
     year: Integer,
@@ -33,7 +34,7 @@ impl KtbfVirtualBond {
     }
 
     /// 파생상품시장 업무규정 시행세칙
-    /// https://law.krx.co.kr/las/LawRevJo.jsp?lawid=000114&pubno=0000022080&pubdt=20240205
+    /// <https://law.krx.co.kr/las/LawRevJo.jsp?lawid=000114&pubno=0000022080&pubdt=20240205>
     pub fn npv(&self, bond_yield: Real) -> Real {
         let coupon_payment_number = self.year * self.frequency as Integer;
         let calc_freq = self.frequency.as_real();
@@ -48,7 +49,72 @@ impl KtbfVirtualBond {
     }
 }
 
-/// If settlement_date is None, it means that the settlement date is equal to the maturity date.
+/// Koread Treasury Bond Futures (KTBF). Reference:
+/// 
+/// <https://law.krx.co.kr/las/LawRevJo.jsp?lawid=000114&pubno=0000022080&pubdt=20240205>
+/// <https://global.krx.co.kr/contents/GLB/02/0201/0201040501/GLB0201040501.jsp>
+/// <https://global.krx.co.kr/contents/GLB/02/0201/0201040503/GLB0201040503.jsp>
+/// # Example
+/// ```
+/// use rustmetrics::instruments::ktbf::{KTBF, KtbfVirtualBond};
+/// use rustmetrics::instruments::bond::Bond;
+/// use rustmetrics::currency::Currency;
+/// use rustmetrics::definitions::Real;
+/// use rustmetrics::{InstInfo, InstType, BondInfo};
+/// use rustmetrics::time::conventions::PaymentFrequency;
+/// use rustmetrics::AccountingLevel;
+/// use static_id::StaticId;
+/// use anyhow::Result;
+/// use time::macros::datetime;
+/// use serde_json;
+/// 
+/// let inst_id = StaticId::from_str("KR7005930003", "KRX");
+/// let inst_info = InstInfo {
+///     id: inst_id,
+///     inst_type: InstType::KTBF,
+///     name: String::from("KTBF"),
+///     currency: Currency::KRW,
+///     issue_date: Some(datetime!(2021-01-01 00:00:00 +09:00)),
+///     maturity: Some(datetime!(2022-01-01 00:00:00 +09:00)),
+///     unit_notional: 100.0,
+///     accounting_level: AccountingLevel::L1,
+/// };
+/// 
+/// let virtual_bond = KtbfVirtualBond::new(
+///     5, 0.03, PaymentFrequency::SemiAnnually, 100.0
+/// );
+/// 
+/// let mut bond = Bond::default();
+/// let bond_id = StaticId::from_str("KR7005930003", "KRX");
+/// let bond_inst_info = InstInfo {
+///     id: bond_id,
+///     inst_type: InstType::Bond,
+///     name: String::from("KTBF"),
+///     currency: Currency::KRW,
+///     issue_date: Some(datetime!(2021-01-01 00:00:00 +09:00)),
+///     maturity: Some(datetime!(2022-01-01 00:00:00 +09:00)),
+///     unit_notional: 100.0,
+///     accounting_level: AccountingLevel::L1,
+/// };
+/// 
+/// bond.set_inst_info(bond_inst_info);
+/// bond.set_pricing_date(datetime!(2022-01-01 00:00:00 +09:00));
+/// let borrowing_curve_id = StaticId::from_str("KR7005930003", "DataProvider");
+/// 
+/// let ktbf = KTBF::new(
+///     inst_info,
+///     None,
+///     virtual_bond,
+///     vec![bond],
+///     borrowing_curve_id,
+/// )?;
+/// 
+/// let serialized = serde_json::to_string(&ktbf)?;
+/// let deserialized: KTBF = serde_json::from_str(&serialized)?;
+/// assert_eq!(ktbf, deserialized);
+/// Ok::<(), anyhow::Error>(())
+/// ```
+   
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KTBF {
     pub isnt_info: InstInfo,

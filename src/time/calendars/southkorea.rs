@@ -6,6 +6,8 @@ use anyhow::Result;
 use log::warn;
 use serde::{Deserialize, Serialize};
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset};
+
+/// South Korea calendar specific type: KRX, Settlement
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum SouthKoreaType {
     Krx,
@@ -700,6 +702,21 @@ impl Holidays for SouthKoreaType {
     }
 }
 
+/// South Korea calendar
+/// # Example
+/// ```
+/// use rustmetrics::time::calendars::southkorea::SouthKoreaType;
+/// use rustmetrics::time::calendars::southkorea::SouthKorea;
+/// use rustmetrics::time::calendar_trait::CalendarTrait;
+/// use time::macros::datetime;
+/// 
+/// let calendar = SouthKorea::new(SouthKoreaType::Krx);
+/// assert_eq!(calendar.is_holiday(&datetime!(2024-2-12 0:0:0 +09:00)), true);
+/// assert_eq!(calendar.is_holiday(&datetime!(2023-12-29 0:0:0 +09:00)), true);
+/// 
+/// let calendar_settlement = SouthKorea::new(SouthKoreaType::Settlement);
+/// assert_eq!(calendar_settlement.is_holiday(&datetime!(2023-12-29 0:0:0 +09:00)), false);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SouthKorea {
     name: String,
@@ -708,6 +725,7 @@ pub struct SouthKorea {
     holiday_adder: Vec<Date>,
     holiday_remover: Vec<Date>,
 }
+
 
 impl SouthKorea {
     pub fn new(specific_type: SouthKoreaType) -> Self {

@@ -113,7 +113,7 @@ mod tests {
     use std::rc::Rc;
     use time::macros::datetime;
     use time::Duration;
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
 
     #[test]
     fn test_ktbf_pricer() -> Result<()> {

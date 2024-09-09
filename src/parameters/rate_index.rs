@@ -9,7 +9,7 @@ use crate::time::jointcalendar::JointCalendar;
 use crate::util::min_offsetdatetime;
 use crate::Tenor;
 //
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, rc::Rc};
@@ -17,7 +17,7 @@ use time::{Duration, OffsetDateTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /// * Tenor is forward curve calculation period\n
-/// * Compounding_tenor (Option<String>) is the period of compounding\n
+/// * Compounding_tenor is the period of compounding\n
 /// At each the end date of the previous compounding_tenor,
 /// the rate is computed by the tenor, and compounded by the compounding_tenor.
 /// For example, if tenor is 91D and compounding_tenor is 1D, and payment_frequency is 3M,
@@ -69,12 +69,12 @@ impl RateIndex {
         &self.curve_tenor
     }
 
-    /// base_schedule (BaseSchedule): fixing_date, calc_start_date, calc_end_date, payment_date, amount (Option)
-    /// spread (Option<Real>): spread to be added to the rate. None means zero spread
-    /// forward_curve (Rc<RefCell<ZeroCurve>>): forward curve
-    /// close_data (Rc<CloseData>): historical data which is used when the fixing date is before the evaluation date
-    /// pricing_date (OffsetDateTime): evaluation date
-    /// compound_tenor (Option<&String>): compounding tenor. This is optional and None means that it is not a overnight type index.
+    /// base_schedule (```BaseSchedule```): fixing_date, calc_start_date, calc_end_date, payment_date, amount (Option)
+    /// spread (```Option<Real>```): spread to be added to the rate. None means zero spread
+    /// forward_curve (```Rc<RefCell<ZeroCurve>>```): forward curve
+    /// close_data (```Rc<CloseData>```): historical data which is used when the fixing date is before the evaluation date
+    /// pricing_date (```OffsetDateTime```): evaluation date
+    /// compound_tenor (```Option<&String>```): compounding tenor. This is optional and None means that it is not a overnight type index.
     /// For example, if the  part is CD91, Libor3M, etc, it is None, but in case of SOFR1D, it is Some(String::from("1D"))
     #[allow(clippy::too_many_arguments)]
     pub fn get_coupon_amount(

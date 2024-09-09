@@ -1,11 +1,14 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
 use std::fmt::Display;
 use std::hash::Hash;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
 /// Enum representing various currencies.
 /// # Example
 /// ```
+/// use rustmetrics::Currency;
+/// use serde_json::{from_str, to_string};
+/// 
 /// let currency = Currency::KRW;
 /// let serialized = to_string(&currency).unwrap();
 /// assert_eq!(serialized, "\"KRW\"");
@@ -81,13 +84,16 @@ impl Currency {
 /// Struct representing a foreign exchange code, which consists of two currencies.
 /// # Example
 /// ```
+/// use rustmetrics::{Currency, FxCode};
+/// use serde_json::{from_str, to_string};
+/// 
 /// let fxcode = FxCode::new(Currency::KRW, Currency::USD);
 /// let serialized = to_string(&fxcode).unwrap();
 /// assert_eq!(serialized, "\"KRWUSD\"");
 /// let deserialized: FxCode = from_str(&serialized).unwrap();
 /// assert_eq!(deserialized, fxcode);
 /// ```
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub struct FxCode {
     pub currency1: Currency,
     pub currency2: Currency,
@@ -127,7 +133,48 @@ impl FxCode {
         StaticId::from_str(s.as_str(), "")
     }
 
+    /// # Arguments
+    /// * `s` - The string representation of the FxCode.
+    /// # Returns
+    /// Returns a new FxCode instance.
+    /// # Example
+    /// ```
+    /// use rustmetrics::{FxCode, Currency};
+    /// let fxcode = FxCode::from_str("KRWUSD");
+    /// assert_eq!(fxcode.currency1, Currency::KRW);
+    /// assert_eq!(fxcode.currency2, Currency::USD);
+    /// ```
+    pub fn from_str(s: &str) -> FxCode {
+        let currency1 = Currency::from(&s[0..3]);
+        let currency2 = Currency::from(&s[3..6]);
+
+        FxCode {
+            currency1,
+            currency2,
+        }
+    }
+
 }
+
+impl Serialize for FxCode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for FxCode {
+    fn deserialize<D>(deserializer: D) -> Result<FxCode, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(FxCode::from(s.as_str()))
+    }
+}
+
 impl Display for FxCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}{}", self.currency1.as_str(), self.currency2.as_str())

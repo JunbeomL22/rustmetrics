@@ -4,6 +4,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use time::{Date, Month, OffsetDateTime, UtcOffset, Weekday};
 
+/// United States holidays
+/// Settlement, Nyse, FederalReserve, Sofr
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum UnitedStatesType {
     Settlement,
@@ -226,6 +228,27 @@ impl Holidays for UnitedStatesType {
     }
 }
 
+/// United States calendar
+/// # Examples
+/// ```
+/// use rustmetrics::time::calendar_trait::CalendarTrait;
+/// use rustmetrics::time::calendars::unitedstates::{UnitedStates, UnitedStatesType};
+/// use time::macros::datetime;
+/// 
+/// let us = UnitedStates::new(UnitedStatesType::Settlement);
+/// assert_eq!(us.calendar_name(), "United States (Settlement)");
+/// 
+/// let date = datetime!(2022-1-1 00:00:00 -5:00);
+///
+/// assert_eq!(us.is_base_holiday(&date), true);
+/// assert_eq!(us.is_removed_holiday(&date), false);
+/// assert_eq!(us.is_added_holiday(&date), false);
+/// let us = UnitedStates::new(UnitedStatesType::Nyse);
+/// assert_eq!(us.calendar_name(), "United States (Nyse)");
+/// 
+/// let us = UnitedStates::new(UnitedStatesType::GovernmentBond);
+/// assert_eq!(us.calendar_name(), "United States (GovernmentBond)");
+/// ``` 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UnitedStates {
     name: String,

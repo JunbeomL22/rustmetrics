@@ -11,7 +11,7 @@ use ndarray::Array1;
 use std::{cell::RefCell, rc::Rc};
 use time;
 use time::OffsetDateTime;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 
 #[derive(Clone, Debug)]
 enum DividendInterpolator {
@@ -33,21 +33,6 @@ pub struct DiscreteRatioDividend {
 }
 
 impl DiscreteRatioDividend {
-    /// evaluation_date: Rc<RefCell<EvaluationDate>>,
-    /// data: Rc<RefCell<VectorData>>, // dividend amount (not yield)
-    /// data is used to make an inner interpolator of accumulated dividend ratio deduction
-    /// data is not an attribute of DiscreteRatioDividen, but an observable variable
-    ///
-    /// data: VectorData have two attributes: times and dates. VectorData::dates allows to be None
-    /// But in the case of DiscreteRatioDividend, dates can not be None.
-    /// This choice is made becasue dividend falls on a specific date not on a specific time.
-    /// To be precise on the dividend deduction on ex-dividend date, the domain of inner interpolator is Integer, not Real.
-    ///
-    /// The integer is calculated from the days from 1970-01-01 +16:00:00 offset, e.g., if it is listed in KRX
-    /// marking_offset = UtcOffset::hours(9)
-    /// The interpolator is made from the integer domain, and the range is Real.
-    ///
-    /// The ex-dividend-time is 00:00:00, and the closing-time is 16:00:00
     pub fn new(
         evaluation_date: Rc<RefCell<EvaluationDate>>,
         data: &VectorData, // dividend amount

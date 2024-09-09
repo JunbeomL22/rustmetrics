@@ -14,7 +14,7 @@ use crate::pricing_engines::{
     pricer::Pricer, unit_pricer::UnitPricer,
 };
 //
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use std::{cell::RefCell, rc::Rc};
 use rustc_hash::FxHashMap;
 

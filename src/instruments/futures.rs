@@ -2,7 +2,7 @@ use crate::currency::Currency;
 use crate::definitions::Real;
 use crate::instrument::InstrumentTrait;
 use crate::InstInfo;
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 //
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -84,7 +84,7 @@ mod tests {
         InstType,
         AccountingLevel,
     };
-    use static_id::static_id::StaticId;
+    use static_id::StaticId;
     #[test]
     fn test_stock_futures_serialization() {
         let inst_id = StaticId::from_str("KR7005930003", "KRX");

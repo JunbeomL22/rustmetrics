@@ -7,7 +7,7 @@ use crate::time::conventions::BusinessDayConvention;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use time::{Date, OffsetDateTime, Time, UtcOffset};
-use static_id::static_id::StaticId;
+use static_id::StaticId;
 use rustc_hash::FxHashMap;
 
 
