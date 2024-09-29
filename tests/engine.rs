@@ -38,7 +38,7 @@ mod tests {
     use rustc_hash::FxHashMap;
     use std::rc::Rc;
     use time::{macros::datetime, Duration};
-    use flashlog::{info, get_unix_nano};
+    use flashlog::{get_unix_nano, flash_info};
     use static_id::static_id::StaticId;
 
     #[test]
@@ -52,7 +52,7 @@ mod tests {
             .with_timezone(flashlog::TimeZone::Local)
             .launch();
 
-        info!("engine test started");
+        flash_info!("EngineRun");
         let theta_day = 100;
         let start_time_nano = get_unix_nano();
         // Set up rolling file appender
@@ -559,7 +559,7 @@ mod tests {
 
         let elapsed_nano = get_unix_nano() - start_time_nano;
         let elapsed = rustmetrics::util::format_duration(elapsed_nano as f64 / 1_000_000_000 as f64);
-        info!("engine test finished {:?}", elapsed);
+        flash_info!("EngineFinished"; "engine test finished {:?}", elapsed);
 
         for (key, value) in calculation_results.iter() {
             println!("inst: {}, value: {:?}", key, value);

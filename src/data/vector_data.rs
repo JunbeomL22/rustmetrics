@@ -14,9 +14,11 @@ use serde::{Deserialize, Serialize};
 /// /// # Example
 ///
 /// ```
-/// use super::*;
+/// use rustmetrics::data::vector_data::VectorData;
+/// use rustmetrics::Currency;
 /// use ndarray::array;
 /// use serde_json;
+/// use static_id::StaticId;
 ///
 /// let vector_data = VectorData::new(
 ///     array![1.0, 2.0, 3.0, 4.0, 5.0],

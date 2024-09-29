@@ -41,7 +41,6 @@ use rustc_hash::{
 };
 use time::{Duration, OffsetDateTime};
 use static_id::static_id::StaticId;
-use flashlog;
 
 /// Engine typically handles a bunch of instruments and calculate the pricing of the instruments.
 /// Therefore, the result of calculations is a hashmap with the key being the code of the instrument
@@ -242,7 +241,7 @@ impl Engine {
                     .collect::<Vec<&str>>()
                     .join(" | ")
             ));
-            flashlog::log_info!("NoData", message = no_dividend_data_msg);
+            flashlog::flash_warn!("NoData"; no_dividend = no_dividend_data_msg);
         }
         //
         // borrowing curve parameter
@@ -535,13 +534,8 @@ impl Engine {
         }
 
         let id = self.engine_id;
-        let msg = flashlog::lazy_string::LazyString::new(move || {
-            format!(
-                "Engine {} is initialized with parameter data\n",
-                id
-            )
-        });
-        flashlog::log_info!("Notification", message = msg);
+
+        flashlog::flash_info!("Launch";"Engine {} is initialized with parameter data", id);
 
         Ok(self)
     }
@@ -1665,17 +1659,7 @@ impl Engine {
                         && (date.date() <= bumped_date.date())
                     {
                         cash_sum += cash;
-                        let cash_copied = cash;
-                        let msg = flashlog::lazy_string::LazyString::new(move || {
-                            format!(
-                                "\n### {} ({}) has a cashflow: {} at {}\n",
-                                inst_code, inst_type, cash_copied, date
-                            )
-                        });
-                        flashlog::log_info!(
-                            "Cashflow",
-                            message = msg,
-                        );
+                        flashlog::flash_info!("Cashflow"; "\n### {} ({}) has a cashflow: {} at {}\n", inst_code, inst_type, cash, date);
                     }
                 }
             }
@@ -1939,16 +1923,8 @@ impl Engine {
 
         if !self.instruments_in_action.is_empty() {
             let id = self.engine_id;
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* instruments to calculate in engine-{}\n",
-                    id
-                )
-            });
-            flashlog::log_warn!(
-                "NoInst",
-                message = msg,
-            );
+            
+            flashlog::flash_warn!("NoInst"; " * instruments to calculate in engine-{}\n", id);
         }
 
         if self.calculation_configuration.get_npv_calculation() {
@@ -1960,16 +1936,7 @@ impl Engine {
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
             
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* npv calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!(
-                "Timer",
-                message = msg,
-            );
+            flashlog::flash_info!("Timer"; "* npv calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_fx_exposure_calculation() {
@@ -1978,16 +1945,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* fx exposure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!(
-                "Timer",
-                message = msg,  
-            );
+            
+            flashlog::flash_info!("Timer"; "* fx exposure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_delta_calculation() {
@@ -1998,13 +1957,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* delta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* delta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_theta_calculation() {
@@ -2046,9 +2000,10 @@ impl Engine {
                     ));
                 }
                 let msg_tag = self.msg_tag.clone();
-                let msg = flashlog::lazy_string::LazyString::new(move || 
-                    format!(
-                        "{}\n\
+                
+                flashlog::flash_warn!(
+                    "UnstableTheta";
+                    "{}\n\
                         (Engine::calculate -> theta calculation)\n\
                         There are instruments whose maturity is within the evaluation_date + theta_day (= {:?}) \n\
                         \n\
@@ -2061,9 +2016,7 @@ impl Engine {
                         &bumped_day,
                         name_mat_pair_list,
                         &shortest_maturity,
-                    )
-                );
-                flashlog::log_warn!("UnstableTheta", message = msg);
+                    );
                 self.set_theta_for_given_instruments(insts_upto_bumped_day, shortest_maturity)?;
             }
 
@@ -2073,13 +2026,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* theta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* theta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_vega_calculation() {
@@ -2088,13 +2036,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* vega calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* vega calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_rho_calculation() {
@@ -2103,13 +2046,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* rho calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* rho calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_div_delta_calculation() {
@@ -2118,13 +2056,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* div_delta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* div_delta calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self
@@ -2136,13 +2069,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* vega-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* vega-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self
@@ -2154,13 +2082,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* rho-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            
+            flashlog::flash_info!("Timer"; "* rho-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self
@@ -2172,13 +2095,10 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* div-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+            flashlog::flash_info!(
+                "Timer";
+                "* div-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", 
+                eng_id, elapsed_sec1, elapsed_sec2);
         }
 
         if self.calculation_configuration.get_vega_matrix_calculation() {
@@ -2187,13 +2107,8 @@ impl Engine {
             let eng_id = self.engine_id;
             let elapsed_sec1 = format_duration((flashlog::get_unix_nano() - timer) as f64 / 1_000_000_000.0);
             let elapsed_sec2 = format_duration((flashlog::get_unix_nano() - start_time) as f64 / 1_000_000_000.0);
-            let msg = flashlog::lazy_string::LazyString::new(move || {
-                format!(
-                    "* vega-structure calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n",
-                    eng_id, elapsed_sec1, elapsed_sec2
-                )
-            });
-            flashlog::log_info!("Timer", message = msg);
+
+            flashlog::flash_info!("Timer"; "* vega-matrix calculation is done (engine id: {}, time = {} sec whole time elapsed: {})\n", eng_id, elapsed_sec1, elapsed_sec2);
         }
         Ok(())
     }

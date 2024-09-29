@@ -3,9 +3,9 @@ use crate::time::constants::{FIRST_LUNAR_NEWYEAR, KOREAN_LUNAR_NEWYEARS, LAST_LU
 use crate::time::holiday::Holidays;
 //
 use anyhow::Result;
-use log::warn;
 use serde::{Deserialize, Serialize};
 use time::{Date, Duration, Month, OffsetDateTime, UtcOffset};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum SouthKoreaType {
     Krx,
@@ -25,7 +25,7 @@ impl SouthKoreaType {
         let year = date.year();
 
         if (year as usize > LAST_LUNAR_NEWYEAR) || (FIRST_LUNAR_NEWYEAR > year as usize) {
-            warn!("Lunar New Year is not available for the year {}", year);
+            println!("(WARN) Lunar New Year is not available for the year {}", year);
             return false;
         }
 
@@ -59,7 +59,7 @@ impl SouthKoreaType {
         let day = date.day();
 
         if !(1951..=2050).contains(&year) {
-            warn!("Buddha's Birthday is not implemented for the year {}", year);
+            println!("(WARN) Buddha's Birthday is not implemented for the year {}", year);
             return false;
         }
 
@@ -174,7 +174,7 @@ impl SouthKoreaType {
         let day = date.day();
 
         if !(1951..=2050).contains(&year) {
-            warn!("Chuseok is not implemented for the year {}", year);
+            println!("Chuseok is not implemented for the year {}", year);
             return false;
         }
 
@@ -492,8 +492,8 @@ impl Holidays for SouthKoreaType {
         let day = date.day();
 
         if !(1951..=2050).contains(&year) {
-            warn!(
-                "Last business day of the year is not implemented for the year {}",
+            println!(
+                "(WARN) Last business day of the year is not implemented for the year {}",
                 year
             );
             return false;

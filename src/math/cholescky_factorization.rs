@@ -1,13 +1,7 @@
 use crate::definitions::Real;
-use log::warn;
 use ndarray::Array2;
 
 pub fn cholesky_decomposition(matrix: &Array2<Real>) -> Result<Array2<Real>, &'static str> {
-    let mut msg = String::from("Cholesky decomposition is carried out by this custom function (utils::cholesky_decomposition)\n");
-    msg.push_str("It is better to use a library for optimization, for example, ndarray-linalg crate has a cholesky function.\n");
-    msg.push_str("In addition, check BLAS is being used. Currently disabled for multi developing environment");
-    warn!("{}", msg);
-
     let n = matrix.nrows();
     if n != matrix.ncols() {
         return Err("Matrix must be square");

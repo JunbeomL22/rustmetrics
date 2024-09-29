@@ -40,6 +40,9 @@ impl BaseSchedule {
     /// * `amount` - The coupon amount
     /// # Example
     /// ```
+    /// use rustmetrics::instruments::schedule::BaseSchedule;
+    /// use time::macros::datetime;
+    /// 
     /// let fixing_date = datetime!(2023-01-31 16:30:00 +09:00);
     /// let calc_start_date = datetime!(2023-04-28 16:30:00 +09:00);
     /// let calc_end_date = datetime!(2023-07-31 16:30:00 +09:00);
@@ -93,15 +96,18 @@ impl BaseSchedule {
 /// A group of BaseSchedule for a coupon for bonds, IRS, etc.
 /// # Example
 /// ```
-/// use crate::time::calendar::Calendar;
-/// use crate::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
+/// use rustmetrics::time::calendar::Calendar;
+/// use rustmetrics::time::calendars::southkorea::{SouthKorea, SouthKoreaType};
+/// use rustmetrics::time::conventions::{BusinessDayConvention, PaymentFrequency};
+/// use rustmetrics::instruments::schedule::build_schedule;
+/// use rustmetrics::time::jointcalendar::JointCalendar;
 /// use time::macros::{date, datetime};
 /// 
 /// let effective_date = datetime!(2023-01-31 16:30:00 +09:00);
 /// let maturity = datetime!(2024-07-31 16:30:00 +09:00);
 /// let cal = SouthKorea::new(SouthKoreaType::Settlement);
 /// let calendar = Calendar::SouthKorea(cal);
-/// let joint_calendar = JointCalendar::new(vec![calendar])?;
+/// let joint_calendar = JointCalendar::new(vec![calendar]).expect("Failed to create JointCalendar");
 /// let schedule = build_schedule(
 ///    true,
 ///    &effective_date,

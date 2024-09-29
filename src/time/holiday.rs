@@ -1,5 +1,4 @@
 use crate::time::constants::{EASTER_MONDAYS, FIRST_EASTER_MONDAY, LAST_EASTER_MONDAY};
-use log::warn;
 use time::{Month, OffsetDateTime, Weekday};
 
 pub trait Holidays {
@@ -23,7 +22,7 @@ pub trait Holidays {
         let (year, _, _, _, dd) = self.unpack(date);
 
         if (year < FIRST_EASTER_MONDAY as i32) || (year as usize > LAST_EASTER_MONDAY) {
-            warn!("Good Friday is not available for the year {}", year);
+            println!("(WARN) Good Friday is not available for the year {}", year);
             return false;
         }
 

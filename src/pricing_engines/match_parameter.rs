@@ -158,7 +158,7 @@ impl MatchParameter {
                     Some(curve_id) => Ok(*curve_id),
                     None => {
                         let msg = format!("id: {:?}, issuer_type: {:?}, credit_rating: {:?}, currency: {:?}", id, issuer_type, credit_rating, instrument.get_currency());
-                        flashlog::log_info!("CurveNotFound", message = msg);
+                        flashlog::flash_warn!("CurveNotFound"; info = msg);
                         Ok(StaticId::default())
                     },
                 }

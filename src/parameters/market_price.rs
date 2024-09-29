@@ -8,10 +8,6 @@ use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 use std::rc::Rc;
 use time::OffsetDateTime;
 use static_id::static_id::StaticId;
-use flashlog::{
-    log_debug,
-    lazy_string::LazyString,
-};
 
 /// an observer of evaluation_date
 /// when ever calculating theta the MarketPrice price mut be deducted by the dividend
@@ -107,15 +103,11 @@ impl MarketPrice {
                         let name = self.name.clone();
                         let id = self.id;
                         let value = self.value;
-                        let msg = LazyString::new(move || {
-                            format!(
-                                "\n{} ({}) is DEDUCTED from dividens by {} on {}\n\
-                                evaluation_date: {:?}, value: {}\n",
-                                name, id, div, date_clone, eval_dt_clone, value
-                            )
-                        });
-
-                        log_debug!("short maturity", message = msg);
+                        flashlog::flash_debug!(
+                            "ShortMaturity"; "\n{} ({}) is DEDUCTED from dividens by {} on {}\n\
+                            evaluation_date: {:?}, value: {}\n",
+                            name, id, div, date_clone, eval_dt_clone, value
+                        );
                     }
                 }
                 self.market_datetime = eval_dt;
@@ -130,15 +122,12 @@ impl MarketPrice {
                         let name_str = self.name.clone();
                         let id = self.id;
                         let value = self.value;
-                        let msg = LazyString::new(move || {
-                            format!(
-                                "\n{} ({}) div deduction is ROLLED back by {} on {}\n\
-                                evluation_date: {:?}, value: {}\n",
-                                name_str, id, div, date_clone, eval_dt_clone, value
-                            )
-                        });
 
-                        log_debug!("short maturity", message = msg);
+                        flashlog::flash_debug!(
+                            "ShortMaturity"; "\n{} ({}) div deduction is ROLLED back by {} on {}\n\
+                            evluation_date: {:?}, value: {}\n",
+                            name_str, id, div, date_clone, eval_dt_clone, value
+                        );
                     }
                 }
                 self.market_datetime = eval_dt;

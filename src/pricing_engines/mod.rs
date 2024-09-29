@@ -3,9 +3,6 @@ pub mod calculation_result;
 pub mod engine;
 pub mod option_analytic_pricer;
 pub mod pricer;
-pub mod montecarlo {
-    pub mod rand_generator;
-}
 pub mod bond_pricer;
 pub mod cash_pricer;
 pub mod engine_generator;

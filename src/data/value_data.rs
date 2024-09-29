@@ -13,8 +13,8 @@ use static_id::static_id::StaticId;
 /// # Example
 ///
 /// ```
-/// use crate::currency::Currency;
-/// use crate::data::value_data::ValueData;
+/// use rustmetrics::currency::Currency;
+/// use rustmetrics::data::value_data::ValueData;
 /// use static_id::StaticId;
 ///
 /// let value_data = ValueData::new(

@@ -21,12 +21,14 @@ use static_id::StaticId;
 /// * `accounting_level` - (AccountingLevel) The accounting level of the instrument
 /// # Example
 /// ```
+/// use rustmetrics::definitions::Real;
+/// use rustmetrics::Currency;
+/// use rustmetrics::instruments::inst_info::InstInfo;
+/// use rustmetrics::instruments::{AccountingLevel, InstType};
+/// 
 /// use serde_json;
 /// use static_id::StaticId;
 /// use time::OffsetDateTime;
-/// use rustmetrics::instruments::inst_info::{InstInfo, InstType, Currency, AccountingLevel};
-/// use rustmetrics::definitions::Real;
-/// use rustmetrics::Currency;
 /// 
 /// let instrument_info = InstInfo {
 ///    id: StaticId::from_str("AAPL", "Some Brocker"),
