@@ -164,6 +164,10 @@ impl DiscreteRatioDividend {
         &self.name
     }
 
+    pub fn get_id(&self) -> StaticId {
+        self.id
+    }
+
     pub fn get_dividend(&self) -> Vec<(OffsetDateTime, Real)> {
         self.ex_dividend_dates
             .iter()
